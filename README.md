@@ -34,7 +34,7 @@ To grab this kit, you can clone it from Github:
 $ git clone https://github.com/Altius/soda.git
 ```
 
-Change into the directory containing the cloned repository, in order to run the script.
+Change into the directory containing the cloned repository, before running the script.
 
 ## Dependencies
 
@@ -58,6 +58,8 @@ $ ./soda.py -r "/home/abc/regions.bed" -s "123456_abcdef" -o "/home/abc/public_h
 
 When finished, the final product is a gallery that is available from the web address `http://www.uwencode.org/~abc/my-soda-plot-results`.
 
+For example, here is a gallery made from earlier testing that is stored in my home directory's `public_html` folder: [http://uwencode.org/~areynolds/soda-test/](http://uwencode.org/~areynolds/soda-test/)
+
 ## Options
 
 Other options are available depending on how you want to customize the run.
@@ -66,7 +68,7 @@ Other options are available depending on how you want to customize the run.
 -a, --range
 ```
 
-Use the `-a` or `--range` option to pad the BED input symmetrically by the specified number of bases.
+Use the `-a` or `--range` option to pad the BED input symmetrically by the specified number of bases. This is similar to applying operations with BEDOPS `bedops --range`, except that this works regardless of the sort order of the input.
 
 ```bash
 -b, --browserBuildID
