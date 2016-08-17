@@ -1,8 +1,21 @@
 #!/usr/bin/env python
 
-#
-# ./soda.py --regionsFn=<regionsFn> --browserSessionID=<sessionID> --outputDir=<outputDir> [--build=<buildID>] [--browserURL=<genomeBrowserURL>] [--browserUsername=<genomeBrowserUsername>] [--browserPassword=<genomeBrowserPassword>]
-#
+"""soda.py
+
+soda.py is a Python script that generates a gallery of images made from snapshots 
+from a UCSC genome browser instance, so-called "soda plots". Snapshots could be 
+derived from the Altius internal browser instance gb1, or any other UCSC browser 
+instance, if specified.
+
+You provide the script with a few parameters:
+
+* A BED-formatted file containing your regions of interest.
+* The session ID from your genome browser session, which specifies the browser 
+  tracks you want to visualize, as well as other visual display parameters that 
+  are specific to your session. 
+* Where you want to store the gallery end-product.
+
+"""
 
 import sys
 import os
@@ -18,18 +31,19 @@ import subprocess
 import jinja2
 
 parser = optparse.OptionParser()
-parser.add_option("-r", "--regionsFn", action="store", type="string", dest="regionsFn", help="Path to BED-formatted regions of interest")
-parser.add_option("-a", "--range", action="store", type="int", dest="rangePadding", help="Add or remove symmetrical padding to input regions")
-parser.add_option("-s", "--browserSessionID", action="store", type="string", dest="browserSessionID", help="Genome browser session ID")
-parser.add_option("-o", "--outputDir", action="store", type="string", dest="outputDir", help="Output (results) directory")
+parser.add_option("-r", "--regionsFn", action="store", type="string", dest="regionsFn", help="Path to BED-formatted regions of interest (required)")
+parser.add_option("-s", "--browserSessionID", action="store", type="string", dest="browserSessionID", help="Genome browser session ID (required)")
+parser.add_option("-o", "--outputDir", action="store", type="string", dest="outputDir", help="Output gallery directory (required)")
+parser.add_option("-t", "--galleryTitle", action="store", type="string", dest="galleryTitle", default="Untitled Gallery", help="Gallery title (optional)")
+parser.add_option("-a", "--range", action="store", type="int", dest="rangePadding", help="Add or remove symmetrical padding to input regions (optional)")
 parser.add_option("-b", "--browserBuildID", action="store", type="string", dest="browserBuildID", default="hg38", help="Genome build ID (optional)")
 parser.add_option("-g", "--browserURL", action="store", type="string", dest="browserURL", default="https://gb1.altiusinstitute.org", help="Genome browser URL (optional)")
 parser.add_option("-u", "--browserUsername", action="store", type="string", dest="browserUsername", default="encode", help="Genome browser username (optional)")
 parser.add_option("-p", "--browserPassword", action="store", type="string", dest="browserPassword", default="associ8", help="Genome browser password (optional)")
+parser.add_option("-l", "--gallerySrcDir", action="store", type="string", dest="gallerySrcDir", help="Blueimp Gallery resources directory (optional)")
+parser.add_option("-c", "--octiconsSrcDir", action="store", type="string", dest="octiconsSrcDir", help="Github Octicons resources directory (optional)")
+parser.add_option("-k", "--convertBinFn", action="store", type="string", dest="convertBinFn", help="ImageMagick convert binary path (optional)")
 parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False, help="Print debug messages to stderr (optional)")
-parser.add_option("-l", "--gallerySrcDir", action="store", type="string", dest="gallerySrcDir", default="Gallery", help="Blueimp Gallery resources directory (optional)")
-parser.add_option("-t", "--galleryTitle", action="store", type="string", dest="galleryTitle", default="Untitled Gallery", help="Gallery title (optional)")
-parser.add_option("-c", "--octiconsSrcDir", action="store", type="string", dest="octiconsSrcDir", default="octicons", help="Github Octicons resources directory (optional)")
 (options, args) = parser.parse_args()
 
 def usage(errCode):
@@ -65,6 +79,10 @@ class Soda:
         self.region_ids = []
         self.region_objs = []
         self.range_padding = None
+        self.convert_bin_fn = None
+        self.output_png_resolution = 600
+        self.output_png_thumbnail_width = 480
+        self.output_png_thumbnail_height = 480
 
     def setup_range_padding(this, rangePadding, debug):
         this.range_padding = rangePadding
@@ -139,6 +157,28 @@ class Soda:
             if debug:
                 sys.stderr.write("Debug: Github Octicons resources directory exists [%s]\n" % (this.octicons_resources_dir))                
     
+    def ensure_convert_bin_fn(this, convertBinFn, debug):
+        if not convertBinFn:
+            sys.stderr.write("Error: ImageMagick convert binary not found\n\n")
+            usage(-1)
+        elif not os.path.exists(convertBinFn):
+            sys.stderr.write("Error: ImageMagick convert binary path [%s] is not accessible\n\n" % (convertBinFn))
+            usage(-1)
+        else:
+            this.convert_bin_fn = convertBinFn
+            if debug:
+                sys.stderr.write("Debug: Convert binary path exists [%s]\n" % (this.convert_bin_fn))
+
+    def find_convert_bin_fn_in_environment_path(this, debug):
+        convertBinName = 'convert'
+        env = os.environ.copy()
+        paths_to_search = env['PATH'].split(":")
+        for path in paths_to_search:
+            for root, dirs, files in os.walk(path):
+                if convertBinName in files:
+                    return os.path.join(root, convertBinName)
+        return None
+
     def copy_regions_to_temp_regions_dir(this, debug):
         this.temp_regions_fn = os.path.join(this.temp_regions_results_dir, os.path.basename(this.original_regions_fn))
         shutil.copyfile(this.original_regions_fn, this.temp_regions_fn)
@@ -171,8 +211,9 @@ class Soda:
                 # create modified ID from index, position and current ID, if available
                 if len(region_elements) >= 4:
                     mod_id = region_elements[3]
-                    mod_id = mod_id.replace(' ', '')
-                    mod_id = mod_id.replace(':', '')
+                    mod_id = mod_id.replace(' ', '-')
+                    mod_id = mod_id.replace(':', '-')
+                    mod_id = mod_id.replace('_', '-')
                     annotation_id = "_".join(['plot', str(counter).zfill(zero_padding), region_elements[0], region_elements[1], region_elements[2], mod_id])
                 elif len(region_elements) == 3:
                     annotation_id = "_".join(['plot', str(counter).zfill(zero_padding), region_elements[0], region_elements[1], region_elements[2]])
@@ -270,7 +311,7 @@ class Soda:
             auth = browser_credentials,
             verify = False
         )
-        browser_pdf_url_soup = bs4.BeautifulSoup(browser_pdf_url_response.text)
+        browser_pdf_url_soup = bs4.BeautifulSoup(browser_pdf_url_response.text, "html.parser")
         browser_pdf_url_soup_hrefs = []
         for anchor in browser_pdf_url_soup.find_all('a'):
             browser_pdf_url_soup_hrefs.append(anchor['href'])
@@ -311,7 +352,7 @@ class Soda:
     def generate_png_from_pdf(this, region_id, debug):
         browser_pdf_local_fn = os.path.join(this.temp_pdf_results_dir, region_id + '.pdf')
         browser_png_local_fn = os.path.join(this.temp_png_results_dir, region_id + '.png')
-        convert_cmd = 'convert -density 600 %s -background white -flatten %s' % (browser_pdf_local_fn, browser_png_local_fn)
+        convert_cmd = '%s -density %d %s -background white -flatten %s' % (this.convert_bin_fn, this.output_png_resolution, browser_pdf_local_fn, browser_png_local_fn)
         try:
             convert_result = subprocess.check_output(convert_cmd, shell = True)
         except subprocess.CalledProcessError as err:
@@ -327,9 +368,9 @@ class Soda:
     def generate_thumbnail_from_png(this, region_id, debug):
         browser_png_local_fn = os.path.join(this.temp_png_results_dir, region_id + '.png')
         browser_thumb_local_fn = os.path.join(this.temp_thumbs_results_dir, region_id + '.png')
-        browser_thumb_width = 480
-        browser_thumb_height = 480
-        convert_cmd = 'convert -thumbnail %dx%d %s %s' % (browser_thumb_width, browser_thumb_height, browser_png_local_fn, browser_thumb_local_fn)
+        browser_thumb_width = this.output_png_thumbnail_width
+        browser_thumb_height = this.output_png_thumbnail_height
+        convert_cmd = '%s -thumbnail %dx%d %s %s' % (this.convert_bin_fn, browser_thumb_width, browser_thumb_height, browser_png_local_fn, browser_thumb_local_fn)
         try:
             convert_result = subprocess.check_output(convert_cmd, shell = True)
         except subprocess.CalledProcessError as err:
@@ -477,8 +518,15 @@ def main():
         s.setup_range_padding(options.rangePadding, options.verbose)
     s.setup_output_dir(options.outputDir, options.verbose)
     s.ensure_regions_fn(options.regionsFn, options.verbose)
+    if not options.gallerySrcDir:
+        options.gallerySrcDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Gallery')
     s.ensure_gallery_src_dir(options.gallerySrcDir, options.verbose)
+    if not options.octiconsSrcDir:
+        options.octiconsSrcDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'octicons')
     s.ensure_octicons_src_dir(options.octiconsSrcDir, options.verbose)
+    if not options.convertBinFn:
+        options.convertBinFn = s.find_convert_bin_fn_in_environment_path(options.verbose)
+    s.ensure_convert_bin_fn(options.convertBinFn, options.verbose)
     s.setup_temp_dirs(options.verbose)
     s.copy_regions_to_temp_regions_dir(options.verbose)
     s.annotate_temp_regions_with_custom_id(options.verbose)
