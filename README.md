@@ -28,7 +28,7 @@ The BED file does not need to be in BEDOPS `sort-bed` order. In fact, it can be 
 $ sort -k5,5n input.bed > input_sorted_by_scores.bed
 ```
 
-Any ordering is allowed.
+Any ordering is allowed. Gallery snapshots are presented in the same order as rows in the input BED file.
 
 ## Download
 
