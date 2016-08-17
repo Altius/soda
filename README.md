@@ -16,7 +16,7 @@ You provide the script with a few parameters:
 2. The [session ID](https://genome.ucsc.edu/goldenpath/help/hgSessionHelp.html) from your genome browser session, which specifies the browser tracks you want to visualize, as well as other visual display parameters that are specific to your session.
 3. Where you want to store the gallery end-product.
 
-If the BED file contains a fourth column, its values are used as labels for each page in the gallery.
+If the BED file contains a fourth column (commonly used to store the [name](https://genome.ucsc.edu/FAQ/FAQformat.html#format1) of the region), its values are used as labels for each page in the gallery.
 
 Additional options are available; please see the [Options](#options) section.
 
