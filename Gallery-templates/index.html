@@ -5,30 +5,41 @@
     <link rel="stylesheet" href="css/blueimp-gallery.min.css">
     <link rel="stylesheet" href="octicons/build/font/octicons.css">
     <style>
+
     body {
         font-family: ".SFNSDisplay-Regular", -apple-system, "Helvetica Neue", "Helvetica", "Segoe", "Calibri", sans-serif !important;
         overflow: hidden;
     }
-    a:link { color: #4882bc; text-decoration: none; }
-    a:visited { color: #4882bc; text-decoration: none; }
-    a:hover { color: #606060; text-decoration: none; }
 
-    .blueimp-gallery > .description-parent, .blueimp-gallery > .pdf-parent, .blueimp-gallery > .external-parent {
-        position: absolute;
-        top: 30px;
-        left: 15px;
-        color: #fff;
-        display: none;
+    a:link { color: #4f8bff; text-decoration: none; }
+    a:visited { color: #4f8bff; text-decoration: none; }
+    a:hover { color: #e3e3e3; text-decoration: none; }
+
+    #header {
+      position: absolute;
+      top: 0px;
+      left: 0px;
+      padding-top: 10px;
+      padding-left: 15px;
+      padding-right: 15px;
+      padding-bottom: 15px;
+      color: #fff;
+      display: block;
+      background-color: rgba(0, 0, 0, 0.667);
+      width: 100%;
+      font-weight: bolder;
     }
-    .blueimp-gallery > .pdf-parent {
-        top: 50px;
+
+    #header > .title {
+      font-size: 1.75em;
+      padding-bottom: 5px !important;
     }
-    .blueimp-gallery > .external-parent {
-        top: 70px;
+
+    #header > .title, #header > .description-parent, #header > .pdf-parent, #header > .external-parent {
+      margin: 0;
+      padding: 0;
     }
-    .blueimp-gallery-controls > .description-parent, .blueimp-gallery-controls > .pdf-parent, .blueimp-gallery-controls > .external-parent {
-        display: block;
-    }
+
     </style>
     <title>{{ title }}</title>
   </head>
@@ -36,10 +47,12 @@
     <h1>{{ title }}</h1>
     <div id="blueimp-gallery" class="blueimp-gallery">
       <div class="slides"></div>
-      <h3 class="title"></h3>
-      <p class="description-parent"><span class="octicon octicon-info" style="font-size:larger;"></span> <span class="description"></span></p>
-      <p class="pdf-parent"><span class="octicon octicon-file-pdf" style="font-size:larger;"></span> <span class="pdf-href"></span></p>
-      <p class="external-parent"><span class="octicon octicon-link-external" style="font-size:larger;"></span> <span class="external-href"></span></p>
+      <div id="header">
+        <h3 class="title"></h3>
+        <p class="description-parent"><span class="octicon octicon-info" style="font-size:larger;"></span> <span class="description"></span></p>
+        <p class="pdf-parent"><span class="octicon octicon-file-pdf" style="font-size:larger;"></span> <span class="pdf-href"></span></p>
+        <p class="external-parent"><span class="octicon octicon-link-external" style="font-size:larger;"></span> <span class="external-href"></span></p>
+      </div>
       <a class="prev">‹</a>
       <a class="next">›</a>
       <a class="close">×</a>
@@ -106,7 +119,7 @@ document.getElementById('links').onclick = function (event) {
 };
 
 document.getElementById("links").click();
-document.getElementsByClassName("slide-content")[0].click();
+setTimeout(function() { document.getElementsByClassName("slide-content")[0].click(); }, 500);
 
     </script>
   </body>

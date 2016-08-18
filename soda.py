@@ -7,9 +7,10 @@ from a UCSC genome browser instance, so-called "soda plots". Snapshots could be
 derived from the Altius internal browser instance gb1, or any other UCSC browser 
 instance, if specified.
 
-You provide the script with a few parameters:
+You provide the script with four parameters:
 
 * A BED-formatted file containing your regions of interest.
+* The genome build name ('hg19', 'mm9', etc.)
 * The session ID from your genome browser session, which specifies the browser 
   tracks you want to visualize, as well as other visual display parameters that 
   are specific to your session. 
@@ -30,20 +31,26 @@ import re
 import subprocess
 import jinja2
 
+default_title = "Untitled Gallery"
+default_genome_browser_url = "https://gb1.altiusinstitute.org"
+default_genome_browser_username = "encode"
+default_genome_browser_password = "associ8"
+default_verbosity = False
+
 parser = optparse.OptionParser()
 parser.add_option("-r", "--regionsFn", action="store", type="string", dest="regionsFn", help="Path to BED-formatted regions of interest (required)")
 parser.add_option("-s", "--browserSessionID", action="store", type="string", dest="browserSessionID", help="Genome browser session ID (required)")
 parser.add_option("-o", "--outputDir", action="store", type="string", dest="outputDir", help="Output gallery directory (required)")
-parser.add_option("-t", "--galleryTitle", action="store", type="string", dest="galleryTitle", default="Untitled Gallery", help="Gallery title (optional)")
+parser.add_option("-b", "--browserBuildID", action="store", type="string", dest="browserBuildID", help="Genome build ID (required)")
+parser.add_option("-t", "--galleryTitle", action="store", type="string", dest="galleryTitle", default=default_title, help="Gallery title (optional)")
+parser.add_option("-g", "--browserURL", action="store", type="string", dest="browserURL", default=default_genome_browser_url, help="Genome browser URL (optional)")
+parser.add_option("-u", "--browserUsername", action="store", type="string", dest="browserUsername", default=default_genome_browser_username, help="Genome browser username (optional)")
+parser.add_option("-p", "--browserPassword", action="store", type="string", dest="browserPassword", default=default_genome_browser_password, help="Genome browser password (optional)")
 parser.add_option("-a", "--range", action="store", type="int", dest="rangePadding", help="Add or remove symmetrical padding to input regions (optional)")
-parser.add_option("-b", "--browserBuildID", action="store", type="string", dest="browserBuildID", default="hg38", help="Genome build ID (optional)")
-parser.add_option("-g", "--browserURL", action="store", type="string", dest="browserURL", default="https://gb1.altiusinstitute.org", help="Genome browser URL (optional)")
-parser.add_option("-u", "--browserUsername", action="store", type="string", dest="browserUsername", default="encode", help="Genome browser username (optional)")
-parser.add_option("-p", "--browserPassword", action="store", type="string", dest="browserPassword", default="associ8", help="Genome browser password (optional)")
 parser.add_option("-l", "--gallerySrcDir", action="store", type="string", dest="gallerySrcDir", help="Blueimp Gallery resources directory (optional)")
 parser.add_option("-c", "--octiconsSrcDir", action="store", type="string", dest="octiconsSrcDir", help="Github Octicons resources directory (optional)")
 parser.add_option("-k", "--convertBinFn", action="store", type="string", dest="convertBinFn", help="ImageMagick convert binary path (optional)")
-parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False, help="Print debug messages to stderr (optional)")
+parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=default_verbosity, help="Print debug messages to stderr (optional)")
 (options, args) = parser.parse_args()
 
 def usage(errCode):
@@ -73,6 +80,7 @@ class Soda:
         self.browser_dump_url = None
         self.browser_pdf_url = None
         self.browser_session_id = None
+        self.browser_session_credentials = False
         self.browser_session_username = None
         self.browser_session_password = None
         self.browser_build_id = None
@@ -227,16 +235,22 @@ class Soda:
 
     def setup_browser_url(this, browserURL, debug):
         this.browser_url = browserURL
+        if browserURL != default_genome_browser_url:
+            options.browserUsername = None
+            options.browserPassword = None
+            sys.stderr.write("Warning: Browser URL was changed from default; credentials were blanked out\n")
         if debug:
             sys.stderr.write("Debug: Browser URL set to [%s]\n" % (this.browser_url))
         
     def setup_browser_username(this, browserUsername, debug):
         this.browser_username = browserUsername
+        this.browser_session_credentials = True
         if debug:
             sys.stderr.write("Debug: Browser username set to [%s]\n" % (this.browser_username))
 
     def setup_browser_password(this, browserPassword, debug):
         this.browser_password = browserPassword
+        this.browser_session_credentials = True
         if debug:
             sys.stderr.write("Debug: Browser password set to [%s]\n" % (this.browser_password))
 
@@ -286,7 +300,9 @@ class Soda:
         }
         if debug:
             sys.stderr.write("Debug: Submitting POST body [%s] to request\n" % (browser_post_body))
-        browser_credentials = requests.auth.HTTPBasicAuth(this.browser_username, this.browser_password)
+        browser_credentials = None
+        if this.browser_session_credentials:
+            browser_credentials = requests.auth.HTTPBasicAuth(this.browser_username, this.browser_password)
         browser_cartdump_response = requests.post(
             url = this.browser_dump_url,
             data = browser_post_body,
@@ -326,8 +342,8 @@ class Soda:
             sys.stderr.write("Debug: Converted PDF soup anchor HREFs are [%s]\n" % (str(browser_pdf_url_soup_hrefs_converted)))
         # fetch PDF
         if len(browser_pdf_url_soup_hrefs_converted) != 1:
-            sys.stderr.write("Warning: No or more than one PDF available for this region\n")
-            return
+            sys.stderr.write("Error: No or more than one PDF available for this region\n")
+            usage(-1)
         browser_pdf_url = browser_pdf_url_soup_hrefs_converted[0]
         browser_pdf_response = requests.get(
             url = browser_pdf_url,
@@ -512,7 +528,17 @@ class Soda:
             sys.stderr.write("Debug: Wrote rendered gallery index file [%s]\n" % (gallery_index_fn))
 
 def main():
-    if not (options.regionsFn and options.browserSessionID and options.outputDir):
+    if not options.regionsFn:
+        sys.stderr.write("Error: Please specify a BED file of input regions\n\n")
+        usage(-1)
+    if not options.browserSessionID:
+        sys.stderr.write("Error: Please specify a genome session ID\n\n")
+        usage(-1)
+    if not options.outputDir:
+        sys.stderr.write("Error: Please specify an output directory\n\n")
+        usage(-1)
+    if not options.browserBuildID:
+        sys.stderr.write("Error: Please specify an genome build ID (hg19, hg38, mm10, etc.)\n\n")
         usage(-1)
     if options.rangePadding:
         s.setup_range_padding(options.rangePadding, options.verbose)

@@ -10,11 +10,12 @@ Python-based soda-plot gallery generator
 
 `soda.py` is a Python script that generates a gallery of images made from snapshots from a UCSC genome browser instance, so-called "soda plots". Snapshots could be derived from the Altius internal browser instance `gb1`, or any other UCSC browser instance, if specified.
 
-You provide the script with a few parameters:
+You provide the script with four required parameters:
 
 1. A BED-formatted file containing your regions of interest.
-2. The [session ID](https://genome.ucsc.edu/goldenpath/help/hgSessionHelp.html) from your genome browser session, which specifies the browser tracks you want to visualize, as well as other visual display parameters that are specific to your session.
-3. Where you want to store the gallery end-product.
+2. The genome build name, such as `hg19`, `hg38`, `mm10`, etc.
+3. The [session ID](https://genome.ucsc.edu/goldenpath/help/hgSessionHelp.html) from your genome browser session, which specifies the browser tracks you want to visualize, as well as other visual display parameters that are specific to your session.
+4. Where you want to store the gallery end-product.
 
 If the BED file contains a fourth column (commonly used to store the [name](https://genome.ucsc.edu/FAQ/FAQformat.html#format1) of the region), its values are used as labels for each page in the gallery.
 
@@ -55,10 +56,10 @@ You do not necessarily need to run this from `sched0`. However, if you run this 
 
 ## Usage
 
-As a usage example, you may have a BED file in some home directory called `/home/abc/regions.bed`. You have a session ID for the `gb1` Altius genome browser instance called `123456_abcdef`, with all your tracks selected and display parameters set. Finally, you want to store the results in a folder called `/home/abc/public_html/my-soda-plot-results` where it can be shared publicly with others via a web browser:
+As a usage example, you may have a BED file in some home directory called `/home/abc/regions.bed`. You have a session ID for the `gb1` Altius genome browser instance called `123456_abcdef`, with all your tracks selected and display parameters set, using `hg38` as the reference genome build. Finally, you want to store the results in a folder called `/home/abc/public_html/my-soda-plot-results` where it can be shared publicly with others via a web browser:
 
 ```bash
-$ /path/to/soda.py -r "/home/abc/regions.bed" -s "123456_abcdef" -o "/home/abc/public_html/my-soda-plot-results"
+$ /path/to/soda.py -r "/home/abc/regions.bed" -b "hg38" -s "123456_abcdef" -o "/home/abc/public_html/my-soda-plot-results"
 ```
 
 When finished, the final product is a gallery that is available from the web address `http://www.uwencode.org/~abc/my-soda-plot-results`.
@@ -90,23 +91,17 @@ Use `-t` or `--title` to specify a gallery title.
 Use the `-a` or `--range` option to pad the BED input symmetrically by the specified number of bases. This is similar to applying operations with BEDOPS `bedops --range`, except that this works regardless of the sort order of the input.
 
 ```bash
--b, --browserBuildID
-```
-
-Use the `-b` or `--browserBuildID` option to specify the genome build key other than the default, *e.g.* `hg19` or `mm10`. The key `hg38` is used as the default.
-
-```bash
 -g, --browserURL
 ```
 
-Use the `-g` or `--browserURL` option to specify a different genome browser URL other than the Altius `gb1` host.
+Use the `-g` or `--browserURL` option to specify a different genome browser URL other than the Altius `gb1` host. If a different host is specified and credentials are required, please use the `-u` and `-p` options (see below).
 
 ```bash
 -u, --browserUsername
 -p, --browserPassword
 ```
 
-Use these two options if you pick a different `--browserURL` to specify authentication credentials.
+Use these two options to specify a username and password for the browser instance, if you pick a different `--browserURL` and that browser instance requires credentials. If these options are not specified, no credentials are passed along, and the script may exit with an error.
 
 ```bash
 -v, --verbose
