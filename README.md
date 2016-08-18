@@ -101,7 +101,7 @@ Use the `-g` or `--browserURL` option to specify a different genome browser URL 
 -p, --browserPassword
 ```
 
-Use these two options to specify a username and password for the browser instance, if you pick a different `--browserURL` and that browser instance requires credentials. If these options are not specified, no credentials are passed along, and the script may exit with an error.
+Use these two options to specify a username and password for the browser instance, if you pick a different `--browserURL` and that browser instance requires credentials. If these options are not specified, no credentials are passed along. If authentication fails, `soda.py` may exit with an error.
 
 ```bash
 -v, --verbose
