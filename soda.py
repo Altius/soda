@@ -16,6 +16,8 @@ You provide the script with four parameters:
   are specific to your session. 
 * Where you want to store the gallery end-product.
 
+Additional options are available. Run with --help for more information.
+
 """
 
 import sys
@@ -30,12 +32,14 @@ import bs4
 import re
 import subprocess
 import jinja2
+import pdfrw
 
 default_title = "Untitled Gallery"
 default_genome_browser_url = "https://gb1.altiusinstitute.org"
 default_genome_browser_username = "encode"
 default_genome_browser_password = "associ8"
 default_verbosity = False
+default_midpoint_annotation = False
 
 parser = optparse.OptionParser()
 parser.add_option("-r", "--regionsFn", action="store", type="string", dest="regionsFn", help="Path to BED-formatted regions of interest (required)")
@@ -46,6 +50,7 @@ parser.add_option("-t", "--galleryTitle", action="store", type="string", dest="g
 parser.add_option("-g", "--browserURL", action="store", type="string", dest="browserURL", default=default_genome_browser_url, help="Genome browser URL (optional)")
 parser.add_option("-u", "--browserUsername", action="store", type="string", dest="browserUsername", default=default_genome_browser_username, help="Genome browser username (optional)")
 parser.add_option("-p", "--browserPassword", action="store", type="string", dest="browserPassword", default=default_genome_browser_password, help="Genome browser password (optional)")
+parser.add_option("-d", "--addMidpointAnnotation", action="store_true", dest="midpointAnnotation", default=default_midpoint_annotation, help="Add midpoint annotation underneath tracks (optional)")
 parser.add_option("-a", "--range", action="store", type="int", dest="rangePadding", help="Add or remove symmetrical padding to input regions (optional)")
 parser.add_option("-l", "--gallerySrcDir", action="store", type="string", dest="gallerySrcDir", help="Blueimp Gallery resources directory (optional)")
 parser.add_option("-c", "--octiconsSrcDir", action="store", type="string", dest="octiconsSrcDir", help="Github Octicons resources directory (optional)")
@@ -91,6 +96,15 @@ class Soda:
         self.output_png_resolution = 600
         self.output_png_thumbnail_width = 480
         self.output_png_thumbnail_height = 480
+        self.midpoint_annotation = False
+
+    def setup_midpoint_annotation(this, midpointAnnotation, debug):
+        this.midpoint_annotation = midpointAnnotation
+        if debug:
+            if this.midpoint_annotation:
+                sys.stderr.write("Debug: Midpoint annotation enabled\n")
+            else:
+                sys.stderr.write("Debug: Midpoint annotation disabled\n")
 
     def setup_range_padding(this, rangePadding, debug):
         this.range_padding = rangePadding
@@ -540,6 +554,7 @@ def main():
     if not options.browserBuildID:
         sys.stderr.write("Error: Please specify an genome build ID (hg19, hg38, mm10, etc.)\n\n")
         usage(-1)
+    setup_midpoint_annotation(options.midpointAnnotation, options.verbose)
     if options.rangePadding:
         s.setup_range_padding(options.rangePadding, options.verbose)
     s.setup_output_dir(options.outputDir, options.verbose)

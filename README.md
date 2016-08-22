@@ -87,6 +87,12 @@ Other options are available depending on how you want to customize the run.
 Use `-t` or `--title` to specify a gallery title.
 
 ```bash
+-d, --addMidpointAnnotation
+```
+
+Use `-d` or `--addMidpointAnnotation` to add a vertical line underneath all tracks, positioned at the midpoint of the genomic range. The annotation is labeled with the genomic coordinate of the midpoint. 
+
+```bash
 -a, --range
 ```
 
