@@ -59,9 +59,9 @@ You do not necessarily need to run this from `sched0`. However, if you run this 
 * [Jinja2](https://pypi.python.org/pypi/Jinja2)
 * [pdfrw](https://pypi.python.org/pypi/pdfrw)
 
-It may be useful to use a package manager to install [ImageMagick](http://www.imagemagick.org) and [Ghostscript](http://www.ghostscript.com/).
+It may be useful to use a package manager to add [ImageMagick](http://www.imagemagick.org) and [Ghostscript](http://www.ghostscript.com/), if not already installed.
 
-Installing these dependencies may also require administrator privileges. In this case, please see the documentation for these components for installation instructions, or contact IT support for assistance.
+Installing these dependencies may also require administrator privileges. In this case, please see the documentation for these components for installation instructions, or contact your local IT support for assistance.
 
 ## Usage
 
@@ -84,6 +84,36 @@ $ open /Users/abc/my-soda-plot-results/index.html
 which opens the gallery index in the default web browser.
 
 ## Options
+
+### Required
+
+Four options are required. At minimum:
+
+```bash
+-r, --regionsFn
+```
+
+Use `-r` or `--regionsFn` to specify the path to the input BED file containing regions of interest.
+
+```bash
+-b, --browserBuildID
+```
+
+The `-b` or `--browserBuildID` option specifies the genome build, *e.g.*, `hg19`, `mm10`, etc.
+
+```bash
+-s, --browserSessionID
+```
+
+The `-s` or `--browserSessionID` option specify the browser session ID, which references a configuration of tracks and display parameters from a genome browser instance.
+
+```bash
+-o, --outputDir
+```
+
+Use the `-o` or `--outputDir` option to specify where the image gallery is saved. If this path already exists, soda.py will exit with a fatal error message.
+
+### Optional
 
 Other options are available depending on how you want to customize the run.
 
