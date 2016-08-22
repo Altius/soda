@@ -52,7 +52,14 @@ Both of these modules are required to run `soda.py` from this host.
 
 ### Note
 
-You do not necessarily need to run this from `sched0`. However, if you run this script locally, such from another host in the lab, or on your personal workstation or laptop, you may need to use `pip` or similar to add Python libraries like [requests](https://pypi.python.org/pypi/requests), [Beautiful Soup](https://pypi.python.org/pypi/beautifulsoup4) and [Jinja2](https://pypi.python.org/pypi/Jinja2), as well as a package manager to install [ImageMagick](http://www.imagemagick.org) and [Ghostscript](http://www.ghostscript.com/).
+You do not necessarily need to run this from `sched0`. However, if you run this script locally, such from another host in the lab, or on your personal workstation or laptop, you may need to use `pip` or similar to add Python libraries that may not be part of a typical environment:
+
+* [requests](https://pypi.python.org/pypi/requests)
+* [Beautiful Soup](https://pypi.python.org/pypi/beautifulsoup4)
+* [Jinja2](https://pypi.python.org/pypi/Jinja2)
+* [pdfrw](https://pypi.python.org/pypi/pdfrw)
+
+It may be useful to use a package manager to install [ImageMagick](http://www.imagemagick.org) and [Ghostscript](http://www.ghostscript.com/).
 
 Installing these dependencies may also require administrator privileges. In this case, please see the documentation for these components for installation instructions, or contact IT support for assistance.
 
