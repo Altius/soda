@@ -111,7 +111,7 @@ The `-s` or `--browserSessionID` option specify the browser session ID, which re
 -o, --outputDir
 ```
 
-Use the `-o` or `--outputDir` option to specify where the image gallery is saved. If this path already exists, soda.py will exit with a fatal error message.
+Use the `-o` or `--outputDir` option to specify where the image gallery is saved. If this path already exists, `soda.py` will exit with a fatal error message.
 
 ### Optional
 
@@ -127,7 +127,7 @@ Use `-t` or `--title` to specify a gallery title.
 -d, --addMidpointAnnotation
 ```
 
-Use `-d` or `--addMidpointAnnotation` to add a vertical line underneath all tracks, positioned at the midpoint of the genomic range. The annotation is labeled with the genomic coordinate of the midpoint. 
+Use `-d` or `--addMidpointAnnotation` to add a red vertical line underneath all tracks, centered on the midpoint of the genomic range. The annotation is also labeled with the genomic coordinate of the midpoint. 
 
 ```bash
 -a, --range

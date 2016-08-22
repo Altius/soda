@@ -55,6 +55,7 @@ parser.add_option("-a", "--range", action="store", type="int", dest="rangePaddin
 parser.add_option("-l", "--gallerySrcDir", action="store", type="string", dest="gallerySrcDir", help="Blueimp Gallery resources directory (optional)")
 parser.add_option("-c", "--octiconsSrcDir", action="store", type="string", dest="octiconsSrcDir", help="Github Octicons resources directory (optional)")
 parser.add_option("-k", "--convertBinFn", action="store", type="string", dest="convertBinFn", help="ImageMagick convert binary path (optional)")
+parser.add_option("-n", "--identifyBinFn", action="store", type="string", dest="identifyBinFn", help="ImageMagick identify binary path (optional)")
 parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=default_verbosity, help="Print debug messages to stderr (optional)")
 (options, args) = parser.parse_args()
 
@@ -93,6 +94,7 @@ class Soda:
         self.region_objs = []
         self.range_padding = None
         self.convert_bin_fn = None
+        self.identify_bin_fn = None
         self.output_png_resolution = 600
         self.output_png_thumbnail_width = 480
         self.output_png_thumbnail_height = 480
@@ -199,6 +201,28 @@ class Soda:
             for root, dirs, files in os.walk(path):
                 if convertBinName in files:
                     return os.path.join(root, convertBinName)
+        return None
+
+    def ensure_identify_bin_fn(this, identifyBinFn, debug):
+        if not identifyBinFn:
+            sys.stderr.write("Error: ImageMagick identify binary not found\n\n")
+            usage(-1)
+        elif not os.path.exists(identifyBinFn):
+            sys.stderr.write("Error: ImageMagick identify binary path [%s] is not accessible\n\n" % (identifyBinFn))
+            usage(-1)
+        else:
+            this.identify_bin_fn = identifyBinFn
+            if debug:
+                sys.stderr.write("Debug: Identify binary path exists [%s]\n" % (this.identify_bin_fn))
+
+    def find_identify_bin_fn_in_environment_path(this, debug):
+        identifyBinName = 'identify'
+        env = os.environ.copy()
+        paths_to_search = env['PATH'].split(":")
+        for path in paths_to_search:
+            for root, dirs, files in os.walk(path):
+                if identifyBinName in files:
+                    return os.path.join(root, identifyBinName)
         return None
 
     def copy_regions_to_temp_regions_dir(this, debug):
@@ -374,6 +398,86 @@ class Soda:
             sys.stderr.write("Debug: Wrote PDF file [%s]\n" % (browser_pdf_local_fn))
         # remove cartDump file
         os.remove(cart_dump_fn)
+        if this.midpoint_annotation:
+            this.generate_pdf_with_midpoint_annotation(browser_pdf_local_fn, region_obj, debug)
+
+    def generate_pdf_with_midpoint_annotation(this, browser_pdf_local_fn, region_obj, debug):
+        # get dimensions of browser PDF with 'identify'
+        identify_width_cmd = '%s -ping -format \'%%w\' %s' % (this.identify_bin_fn, browser_pdf_local_fn)
+        try:
+            browser_pdf_width = subprocess.check_output(identify_width_cmd, shell = True)
+        except subprocess.CalledProcessError as err:
+            identify_width_result = "Error: Command '{}' returned with error (code {}): {}".format(err.cmd, err.returncode, err.output)
+            sys.stderr.write("%s\n" % (identify_width_result))
+            sys.exit(-1)
+        if debug:
+            sys.stderr.write("Debug: PDF width [%s]\n" % (browser_pdf_width))
+        identify_height_cmd = '%s -ping -format \'%%h\' %s' % (this.identify_bin_fn, browser_pdf_local_fn)
+        try:
+            browser_pdf_height = subprocess.check_output(identify_height_cmd, shell = True)
+        except subprocess.CalledProcessError as err:
+            identify_height_result = "Error: Command '{}' returned with error (code {}): {}".format(err.cmd, err.returncode, err.output)
+            sys.stderr.write("%s\n" % (identify_height_result))
+            sys.exit(-1)
+        if debug:
+            sys.stderr.write("Debug: PDF height [%s]\n" % (browser_pdf_height))
+        # make blank SVG with similar dimensions (same width, but taller)
+        top_padding = 20
+        svg = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="%d" height="%d" viewBox="0 0 %d %d">' % (int(browser_pdf_width), int(browser_pdf_height) + top_padding, int(browser_pdf_width), int(browser_pdf_height) + top_padding)
+        # draw vertical line and text on SVG canvas
+        leftmost_column_width = 53
+        track_column_width = int(browser_pdf_width) - leftmost_column_width
+        midpoint_line_x1 = leftmost_column_width + (track_column_width / 2.0)
+        midpoint_line_x2 = midpoint_line_x1
+        midpoint_line_y1 = 0 
+        midpoint_line_y2 = int(browser_pdf_height) + top_padding
+        svg_line_stroke = 'rgba(255,0,0,0.75)'
+        svg_line_stroke_width = '0.25'
+        svg_line_fill = 'none'
+        svg = svg + '<line x1="%d" y1="%d" x2="%d" y2="%d" style="stroke:%s;stroke-width:%s;fill:%s;" />' % (midpoint_line_x1, midpoint_line_y1, midpoint_line_x2, midpoint_line_y2, svg_line_stroke, svg_line_stroke_width, svg_line_fill)
+        midpoint_chr = region_obj['chrom']
+        midpoint_start = int(region_obj['start']) + int((int(region_obj['stop']) - int(region_obj['start'])) / 2)
+        midpoint_stop = midpoint_start + 1
+        midpoint_text = '%s:%d-%d' % (midpoint_chr, midpoint_start, midpoint_stop)
+        svg_text_x = midpoint_line_x1 + 3
+        svg_text_y = 8
+        svg_text_fill = svg_line_stroke
+        svg_text_font_family = 'sans-serif'
+        svg_text_font_size = '8'
+        svg = svg + '<text x="%d" y="%d" style="fill:%s;font-family:%s;font-size:%s">%s</text>' % (svg_text_x, svg_text_y, svg_text_fill, svg_text_font_family, svg_text_font_size, midpoint_text)
+        svg = svg + '</svg>'
+        # write SVG to text file
+        svg_local_fn = os.path.join(this.temp_pdf_results_dir, 'watermark.svg')
+        with open(svg_local_fn, 'wb') as svg_local_fh:
+            svg_local_fh.write(svg)
+        if debug:
+            sys.stderr.write("Debug: Written SVG watermark to [%s]\n" % (svg_local_fn))
+        # `convert` SVG to PDF with high density
+        svg_as_pdf_local_fn = os.path.join(this.temp_pdf_results_dir, 'watermark.pdf')
+        convert_cmd = '%s -density %d %s -background white -flatten %s' % (this.convert_bin_fn, this.output_png_resolution, svg_local_fn, svg_as_pdf_local_fn)
+        try:
+            convert_result = subprocess.check_output(convert_cmd, shell = True)
+        except subprocess.CalledProcessError as err:
+            convert_result = "Error: Command '{}' returned with error (code {}): {}".format(err.cmd, err.returncode, err.output)
+            sys.stderr.write("%s\n" % (convert_result))
+            sys.exit(-1)
+        if debug:
+            sys.stderr.write("Debug: Converted SVG watermark to PDF\n")
+        # watermark the SVG with the browser PDF, using pdfrw library
+        watermarked_browser_pdf_local_fn = browser_pdf_local_fn + '.watermarked'
+        browser_pdfrw_obj = pdfrw.PageMerge().add(pdfrw.PdfReader(browser_pdf_local_fn).pages[0])[0]
+        svg_pdfrw_obj = pdfrw.PdfReader(svg_as_pdf_local_fn)
+        for page in svg_pdfrw_obj.pages:
+            pdfrw.PageMerge(page).add(browser_pdfrw_obj, prepend=False).render()
+        pdfrw.PdfWriter().write(watermarked_browser_pdf_local_fn, svg_pdfrw_obj)
+        if debug:
+            sys.stderr.write("Debug: Merged SVG watermark with browser PDF\n")
+        # copy watermarked_browser_pdf_local_fn to browser_pdf_local_fn
+        shutil.copyfile(watermarked_browser_pdf_local_fn, browser_pdf_local_fn)
+        # remove temporary files
+        os.remove(svg_local_fn)
+        os.remove(svg_as_pdf_local_fn)
+        os.remove(watermarked_browser_pdf_local_fn)
 
     def generate_pngs_from_pdfs(this, debug):
         for region_id in this.region_ids:
@@ -387,6 +491,7 @@ class Soda:
             convert_result = subprocess.check_output(convert_cmd, shell = True)
         except subprocess.CalledProcessError as err:
             convert_result = "Error: Command '{}' returned with error (code {}): {}".format(err.cmd, err.returncode, err.output)
+            sys.stderr.write("%s\n" % (convert_result))
             sys.exit(-1)
         if debug:
             sys.stderr.write("Debug: Converted image file located at [%s]\n" % (browser_png_local_fn))
@@ -554,7 +659,7 @@ def main():
     if not options.browserBuildID:
         sys.stderr.write("Error: Please specify an genome build ID (hg19, hg38, mm10, etc.)\n\n")
         usage(-1)
-    setup_midpoint_annotation(options.midpointAnnotation, options.verbose)
+    s.setup_midpoint_annotation(options.midpointAnnotation, options.verbose)
     if options.rangePadding:
         s.setup_range_padding(options.rangePadding, options.verbose)
     s.setup_output_dir(options.outputDir, options.verbose)
@@ -568,6 +673,9 @@ def main():
     if not options.convertBinFn:
         options.convertBinFn = s.find_convert_bin_fn_in_environment_path(options.verbose)
     s.ensure_convert_bin_fn(options.convertBinFn, options.verbose)
+    if not options.identifyBinFn:
+        options.identifyBinFn = s.find_identify_bin_fn_in_environment_path(options.verbose)
+    s.ensure_identify_bin_fn(options.identifyBinFn, options.verbose)
     s.setup_temp_dirs(options.verbose)
     s.copy_regions_to_temp_regions_dir(options.verbose)
     s.annotate_temp_regions_with_custom_id(options.verbose)
