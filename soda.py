@@ -44,7 +44,7 @@ default_midpoint_annotation = False
 default_interval_annotation = False
 default_annotation_rgba = "rgba(255, 0, 0, 0.333)" # i.e., full red with 33% opacity
 default_annotation_font_size = "5"
-default_annotation_font_family = "Arial"
+default_annotation_font_family = "Helvetica-Bold"
 
 parser = optparse.OptionParser()
 parser.add_option("-r", "--regionsFn", action="store", type="string", dest="regionsFn", help="Path to BED-formatted regions of interest (required)")
