@@ -111,6 +111,7 @@ class Soda:
         self.interval_annotation = default_interval_annotation
         self.annotation_rgba = default_annotation_rgba
         self.annotation_font_family = default_annotation_font_family
+        self.track_label_column_width = None
 
     def setup_midpoint_annotation(this, midpointAnnotation, debug):
         this.midpoint_annotation = midpointAnnotation
@@ -333,7 +334,7 @@ class Soda:
             sys.stderr.write("Debug: Browser build ID set to [%s]\n" % (this.browser_build_id))
 
     def setup_browser_dump_url(this, debug):
-        this.browser_dump_url = this.browser_url + '/cgi-bin/cartDump'
+        this.browser_dump_url = this.browser_url + '/cgi-bin/cartDump?cartDumpAsTable=[]'
         if debug:
             sys.stderr.write("Debug: Browser dump URL set to [%s]\n" % (this.browser_dump_url))
 
@@ -346,6 +347,64 @@ class Soda:
         this.browser_session_id = browserSessionID
         if debug:
             sys.stderr.write("Debug: Browser session ID set to [%s]\n" % (this.browser_session_id))
+
+    def setup_track_label_column_width(this, textSize, labelWidth, debug):
+        """
+        * multiplicative factors were derived approximately from measuring PDFs 
+          rendered from combinations of various text size and label width settings
+
+        * text size is guaranteed to be one of the following values per UCSC support:
+          cf. https://groups.google.com/a/soe.ucsc.edu/d/msg/genome/TNnukmFSiVI/pimG80jQBAAJ
+        """
+        if textSize == 6 or textSize == 8 or textSize == 10:
+            if labelWidth <= 20:
+                this.track_label_column_width = int(float(labelWidth) * 3.18)
+            elif labelWidth >= 21 and labelWidth <= 45:
+                this.track_label_column_width = int(float(labelWidth) * 2.95)
+            elif labelWidth > 45:
+                this.track_label_column_width = int(float(labelWidth) * 2.83)
+        elif textSize == 12:
+            if labelWidth <= 30:
+                this.track_label_column_width = int(float(labelWidth) * 3.45)
+            elif labelWidth >= 31 and labelWidth <= 45:
+                this.track_label_column_width = int(float(labelWidth) * 3.32)
+            elif labelWidth >= 46:
+                this.track_label_column_width = int(float(labelWidth) * 3.28)
+        elif textSize == 14:
+            if labelWidth <= 30:
+                this.track_label_column_width = int(float(labelWidth) * 3.85)
+            elif labelWidth >= 31 and labelWidth <= 45:
+                this.track_label_column_width = int(float(labelWidth) * 3.78)
+            elif labelWidth >= 46:
+                this.track_label_column_width = int(float(labelWidth) * 3.74)
+        elif textSize == 18:
+            if labelWidth <= 30:
+                this.track_label_column_width = int(float(labelWidth) * 4.76)
+            elif labelWidth >= 31 and labelWidth <= 45:
+                this.track_label_column_width = int(float(labelWidth) * 4.69)
+            elif labelWidth >= 46:
+                this.track_label_column_width = int(float(labelWidth) * 4.47)
+        elif textSize == 24:
+            if labelWidth <= 30:
+                this.track_label_column_width = int(float(labelWidth) * 6.58)
+            elif labelWidth >= 31 and labelWidth <= 45:
+                this.track_label_column_width = int(float(labelWidth) * 5.94)
+            elif labelWidth >= 46:
+                this.track_label_column_width = int(float(labelWidth) * 4.45)
+        elif textSize == 34:
+            if labelWidth <= 30:
+                this.track_label_column_width = int(float(labelWidth) * 8.39)
+            elif labelWidth >= 31 and labelWidth <= 45:
+                this.track_label_column_width = int(float(labelWidth) * 6.00)
+            elif labelWidth >= 46:
+                this.track_label_column_width = int(float(labelWidth) * 4.50)
+
+        # shift offset one pixel from the left edge border
+        this.track_label_column_width = this.track_label_column_width + 1
+        
+        if debug:
+            sys.stderr.write("Debug: Track label column width set to [%d] pixels\n" % (this.track_label_column_width))
+
 
     def generate_pdfs_from_annotated_regions(this, debug):
         with open(this.temp_annotated_regions_fn, "r") as temp_annotated_regions_fh:
@@ -382,8 +441,25 @@ class Soda:
             auth = browser_credentials,
             verify = False,
         )
-        # write response text to cartDump in temporary output folder
+        # get cart dump
         browser_cartdump_response_content = browser_cartdump_response.content
+        browser_cartdump_textSize = None # textSize
+        browser_cartdump_hgt_labelWidth = None # hgt.labelWidth
+        browser_cartdump_lines = browser_cartdump_response_content.split('\n')
+        for browser_cartdump_line in browser_cartdump_lines:
+            try:
+                browser_cartdump_line_values = browser_cartdump_line.rstrip().split(' ')
+            except ValueError as ve:
+                sys.stderr.write("Error: Could not parse cartDump response [%s]" % (browser_cartdump_response_content))
+                sys.exit(-1)
+            if browser_cartdump_line_values[0] == 'textSize':
+                browser_cartdump_textSize = browser_cartdump_line_values[1]
+            elif browser_cartdump_line_values[0] == 'hgt.labelWidth':
+                browser_cartdump_hgt_labelWidth = browser_cartdump_line_values[1]
+        if debug:
+            sys.stderr.write("Debug: Cart dump textSize and hgt.labelWidth are: [%s] and [%s]\n" % (browser_cartdump_textSize, browser_cartdump_hgt_labelWidth))
+        this.setup_track_label_column_width(int(browser_cartdump_textSize), int(browser_cartdump_hgt_labelWidth), debug)
+        # write response text to cartDump in temporary output folder
         cart_dump_fn = os.path.join(this.temp_pdf_results_dir, 'cartDump')
         if debug:
             sys.stderr.write("Debug: Writing cart dump response content to [%s]\n" % (cart_dump_fn))
@@ -395,6 +471,8 @@ class Soda:
             sys.stderr.write("Error: Could not write cart dump data to [%s]\n" % (cart_dump_fn))
             sys.exit(-1)
         # get PDF URL
+        if debug:
+            sys.stderr.write("Debug: Requesting PDF via: [%s]\n" % (this.browser_pdf_url))
         browser_pdf_url_response = requests.get(
             url = this.browser_pdf_url,
             auth = browser_credentials,
@@ -458,7 +536,7 @@ class Soda:
             sys.stderr.write("Debug: PDF height [%s]\n" % (browser_pdf_height))
         # make blank SVG with similar dimensions (same width, but taller)
         top_padding = 20
-        leftmost_column_width = 54
+        leftmost_column_width = this.track_label_column_width
         track_column_width = int(browser_pdf_width) - leftmost_column_width
         svg = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="%d" height="%d" viewBox="0 0 %d %d">' % (int(browser_pdf_width), int(browser_pdf_height) + top_padding, int(browser_pdf_width), int(browser_pdf_height) + top_padding)
         if this.midpoint_annotation:
