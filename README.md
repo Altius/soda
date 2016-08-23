@@ -124,10 +124,18 @@ Other options are available depending on how you want to customize the run.
 Use `-t` or `--title` to specify a gallery title.
 
 ```bash
--d, --addMidpointAnnotation
+[ -i, --addIntervalAnnotation | -d, --addMidpointAnnotation ]
 ```
 
-Use `-d` or `--addMidpointAnnotation` to add a red vertical line underneath all tracks, centered on the midpoint of the genomic range. The annotation is also labeled with the genomic coordinate of the midpoint. 
+Use `-i` or `--addIntervalAnnotation` to add a rectangle underneath all tracks that demarcates the original genomic range (useful when used with `--range`). Alternatively, use `-d` or `--addMidpointAnnotation` to add a vertical line underneath all tracks, centered on the midpoint of the input genomic range. In both cases, the annotation is labeled with the genomic coordinates of the original interval or the calculated midpoint, respectively. It is not allowed to specify both options together.
+
+```bash
+-w, --annotationRgba
+-z, --annotationFontPointSize
+-f, --annotationFontFamily
+```
+
+When used with `-i` or `-d` to add an interval or midpoint annotation, these options may be used to override the default [`rgba()` color](http://www.w3schools.com/cssref/css_colors_legal.asp), typeface point size, and typeface family (where supported by the local installation of ImageMagick), which are parameters used to render the appearance of the annotation components. The default color is `rgba(255, 0, 0, 0.333)` and the default point size and font family values are `5` and `Arial`, respectively. 
 
 ```bash
 -a, --range

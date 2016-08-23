@@ -16,7 +16,8 @@ You provide the script with four parameters:
   are specific to your session. 
 * Where you want to store the gallery end-product.
 
-Additional options are available. Run with --help for more information.
+Additional options are available. Run with --help for more information or read 
+the Options section of the README at: https://github.com/Altius/soda#options
 
 """
 
@@ -40,6 +41,10 @@ default_genome_browser_username = "encode"
 default_genome_browser_password = "associ8"
 default_verbosity = False
 default_midpoint_annotation = False
+default_interval_annotation = False
+default_annotation_rgba = "rgba(255, 0, 0, 0.333)" # i.e., full red with 33% opacity
+default_annotation_font_size = "5"
+default_annotation_font_family = "Arial"
 
 parser = optparse.OptionParser()
 parser.add_option("-r", "--regionsFn", action="store", type="string", dest="regionsFn", help="Path to BED-formatted regions of interest (required)")
@@ -51,6 +56,10 @@ parser.add_option("-g", "--browserURL", action="store", type="string", dest="bro
 parser.add_option("-u", "--browserUsername", action="store", type="string", dest="browserUsername", default=default_genome_browser_username, help="Genome browser username (optional)")
 parser.add_option("-p", "--browserPassword", action="store", type="string", dest="browserPassword", default=default_genome_browser_password, help="Genome browser password (optional)")
 parser.add_option("-d", "--addMidpointAnnotation", action="store_true", dest="midpointAnnotation", default=default_midpoint_annotation, help="Add midpoint annotation underneath tracks (optional)")
+parser.add_option("-i", "--addIntervalAnnotation", action="store_true", dest="intervalAnnotation", default=default_interval_annotation, help="Add interval annotation underneath tracks (optional)")
+parser.add_option("-w", "--annotationRgba", action="store", type="string", dest="annotationRgba", default=default_annotation_rgba, help="Annotation 'rgba(r,g,b,a)' color string (optional)")
+parser.add_option("-z", "--annotationFontPointSize", action="store", type="string", dest="annotationFontPointSize", default=default_annotation_font_size, help="Annotation font point size (optional)")
+parser.add_option("-f", "--annotationFontFamily", action="store", type="string", dest="annotationFontFamily", default=default_annotation_font_family, help="Annotation font family (optional)")
 parser.add_option("-a", "--range", action="store", type="int", dest="rangePadding", help="Add or remove symmetrical padding to input regions (optional)")
 parser.add_option("-l", "--gallerySrcDir", action="store", type="string", dest="gallerySrcDir", help="Blueimp Gallery resources directory (optional)")
 parser.add_option("-c", "--octiconsSrcDir", action="store", type="string", dest="octiconsSrcDir", help="Github Octicons resources directory (optional)")
@@ -98,7 +107,10 @@ class Soda:
         self.output_png_resolution = 600
         self.output_png_thumbnail_width = 480
         self.output_png_thumbnail_height = 480
-        self.midpoint_annotation = False
+        self.midpoint_annotation = default_midpoint_annotation
+        self.interval_annotation = default_interval_annotation
+        self.annotation_rgba = default_annotation_rgba
+        self.annotation_font_family = default_annotation_font_family
 
     def setup_midpoint_annotation(this, midpointAnnotation, debug):
         this.midpoint_annotation = midpointAnnotation
@@ -107,6 +119,29 @@ class Soda:
                 sys.stderr.write("Debug: Midpoint annotation enabled\n")
             else:
                 sys.stderr.write("Debug: Midpoint annotation disabled\n")
+
+    def setup_interval_annotation(this, intervalAnnotation, debug):
+        this.interval_annotation = intervalAnnotation
+        if debug:
+            if this.interval_annotation:
+                sys.stderr.write("Debug: Interval annotation enabled\n")
+            else:
+                sys.stderr.write("Debug: Interval annotation disabled\n")
+
+    def setup_annotation_rgba(this, annotationRgba, debug):
+        this.annotation_rgba = annotationRgba
+        if debug:
+            sys.stderr.write("Debug: Annotation RGBA color string set to [%s]\n" % (this.annotation_rgba))
+
+    def setup_annotation_font_point_size(this, annotationFontPointSize, debug):
+        this.annotation_font_point_size = annotationFontPointSize
+        if debug:
+            sys.stderr.write("Debug: Annotation font point size string set to [%s]\n" % (this.annotation_font_point_size))
+
+    def setup_annotation_font_family(this, annotationFontFamily, debug):
+        this.annotation_font_family = annotationFontFamily
+        if debug:
+            sys.stderr.write("Debug: Annotation font family set to [%s]\n" % (this.annotation_font_family))
 
     def setup_range_padding(this, rangePadding, debug):
         this.range_padding = rangePadding
@@ -398,10 +433,10 @@ class Soda:
             sys.stderr.write("Debug: Wrote PDF file [%s]\n" % (browser_pdf_local_fn))
         # remove cartDump file
         os.remove(cart_dump_fn)
-        if this.midpoint_annotation:
-            this.generate_pdf_with_midpoint_annotation(browser_pdf_local_fn, region_obj, debug)
+        if this.midpoint_annotation or this.interval_annotation:
+            this.generate_pdf_with_annotation(browser_pdf_local_fn, region_obj, debug)
 
-    def generate_pdf_with_midpoint_annotation(this, browser_pdf_local_fn, region_obj, debug):
+    def generate_pdf_with_annotation(this, browser_pdf_local_fn, region_obj, debug):
         # get dimensions of browser PDF with 'identify'
         identify_width_cmd = '%s -ping -format \'%%w\' %s' % (this.identify_bin_fn, browser_pdf_local_fn)
         try:
@@ -423,28 +458,64 @@ class Soda:
             sys.stderr.write("Debug: PDF height [%s]\n" % (browser_pdf_height))
         # make blank SVG with similar dimensions (same width, but taller)
         top_padding = 20
-        svg = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="%d" height="%d" viewBox="0 0 %d %d">' % (int(browser_pdf_width), int(browser_pdf_height) + top_padding, int(browser_pdf_width), int(browser_pdf_height) + top_padding)
-        # draw vertical line and text on SVG canvas
-        leftmost_column_width = 53
+        leftmost_column_width = 54
         track_column_width = int(browser_pdf_width) - leftmost_column_width
-        midpoint_line_x1 = leftmost_column_width + (track_column_width / 2.0)
-        midpoint_line_x2 = midpoint_line_x1
-        midpoint_line_y1 = 0 
-        midpoint_line_y2 = int(browser_pdf_height) + top_padding
-        svg_line_stroke = 'rgba(255,0,0,0.75)'
-        svg_line_stroke_width = '0.25'
-        svg_line_fill = 'none'
-        svg = svg + '<line x1="%d" y1="%d" x2="%d" y2="%d" style="stroke:%s;stroke-width:%s;fill:%s;" />' % (midpoint_line_x1, midpoint_line_y1, midpoint_line_x2, midpoint_line_y2, svg_line_stroke, svg_line_stroke_width, svg_line_fill)
-        midpoint_chr = region_obj['chrom']
-        midpoint_start = int(region_obj['start']) + int((int(region_obj['stop']) - int(region_obj['start'])) / 2)
-        midpoint_stop = midpoint_start + 1
-        midpoint_text = '%s:%d-%d' % (midpoint_chr, midpoint_start, midpoint_stop)
-        svg_text_x = midpoint_line_x1 + 3
-        svg_text_y = 8
-        svg_text_fill = svg_line_stroke
-        svg_text_font_family = 'sans-serif'
-        svg_text_font_size = '8'
-        svg = svg + '<text x="%d" y="%d" style="fill:%s;font-family:%s;font-size:%s">%s</text>' % (svg_text_x, svg_text_y, svg_text_fill, svg_text_font_family, svg_text_font_size, midpoint_text)
+        svg = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="%d" height="%d" viewBox="0 0 %d %d">' % (int(browser_pdf_width), int(browser_pdf_height) + top_padding, int(browser_pdf_width), int(browser_pdf_height) + top_padding)
+        if this.midpoint_annotation:
+            # draw <line> on SVG
+            svg_line_x1 = leftmost_column_width + (track_column_width / 2.0)
+            svg_line_x2 = svg_line_x1
+            svg_line_y1 = 0 
+            svg_line_y2 = int(browser_pdf_height) + top_padding
+            svg_line_stroke = this.annotation_rgba
+            svg_line_stroke_width = '0.25'
+            svg_line_fill = 'none'
+            svg = svg + '<line x1="%d" y1="%d" x2="%d" y2="%d" style="stroke:%s;stroke-width:%s;fill:%s;" />' % (svg_line_x1, svg_line_y1, svg_line_x2, svg_line_y2, svg_line_stroke, svg_line_stroke_width, svg_line_fill)
+            # draw <text> on SVG
+            svg_text_chr = region_obj['chrom']
+            svg_text_start = int(region_obj['start']) + int((int(region_obj['stop']) - int(region_obj['start'])) / 2)
+            svg_text_stop = svg_text_start + 1
+            svg_text = '%s:%d-%d' % (svg_text_chr, svg_text_start, svg_text_stop)
+            svg_text_x = svg_line_x1 + 3
+            svg_text_y = 8
+            svg_text_fill = svg_line_stroke
+            svg_text_font_family = this.annotation_font_family
+            svg_text_font_size = this.annotation_font_point_size
+            svg = svg + '<text x="%d" y="%d" style="font-family:%s;fill:%s;font-size:%s">%s</text>' % (svg_text_x, svg_text_y, svg_text_font_family, svg_text_fill, svg_text_font_size, svg_text)
+        elif this.interval_annotation:
+            # draw <rect> element on SVG
+            full_start = int(region_obj['start'])
+            full_stop = int(region_obj['stop'])
+            if this.range_padding:
+                adj_start = full_start + this.range_padding
+                adj_stop = full_stop - this.range_padding
+                adj_ratio = float(adj_stop - adj_start) / float(full_stop - full_start) # fraction of annotated range that represents pre-range interval
+            else:
+                adj_start = full_start
+                adj_stop = full_stop
+                adj_ratio = 1.0
+            adj_track_column_width = int(track_column_width * adj_ratio)
+            adj_track_width_difference = track_column_width - adj_track_column_width
+            adj_track_x_offset = int(float(adj_track_width_difference) / 2.0)
+            adj_track_column_height = int(browser_pdf_height) + top_padding
+            svg_rect_x = leftmost_column_width + adj_track_x_offset
+            svg_rect_y = 0
+            svg_rect_width = adj_track_column_width
+            svg_rect_height = adj_track_column_height
+            svg_rect_fill = this.annotation_rgba
+            svg_rect_stroke = svg_rect_fill
+            svg_rect_stroke_width = '0'
+            svg = svg + '<rect x="%d" y="%d" width="%d" height="%d" style="fill:%s;stroke-width:%s;stroke:%s" />' % (svg_rect_x, svg_rect_y, svg_rect_width, svg_rect_height, svg_rect_fill, svg_rect_stroke_width, svg_rect_stroke)
+            # draw <text> on SVG
+            svg_text_chr = region_obj['chrom']
+            svg_text = '%s:%d-%d' % (svg_text_chr, adj_start, adj_stop)
+            svg_text_x = leftmost_column_width + (track_column_width / 2.0)
+            svg_text_y = 8
+            svg_text_fill = 'rgba(0,0,0,1)'
+            svg_text_font_family = this.annotation_font_family
+            svg_text_font_size = this.annotation_font_point_size
+            svg_text_anchor = "middle"
+            svg = svg + '<text x="%d" y="%d" text-anchor="%s" style="font-family:%s;fill:%s;font-size:%s">%s</text>' % (svg_text_x, svg_text_y, svg_text_anchor, svg_text_font_family, svg_text_fill, svg_text_font_size, svg_text)
         svg = svg + '</svg>'
         # write SVG to text file
         svg_local_fn = os.path.join(this.temp_pdf_results_dir, 'watermark.svg')
@@ -659,7 +730,14 @@ def main():
     if not options.browserBuildID:
         sys.stderr.write("Error: Please specify an genome build ID (hg19, hg38, mm10, etc.)\n\n")
         usage(-1)
+    if options.midpointAnnotation and options.intervalAnnotation:
+        sys.stderr.write("Error: Please specify only one of midpoint or interval annotation flags\n\n")
+        usage(-1)
     s.setup_midpoint_annotation(options.midpointAnnotation, options.verbose)
+    s.setup_interval_annotation(options.intervalAnnotation, options.verbose)
+    s.setup_annotation_rgba(options.annotationRgba, options.verbose)
+    s.setup_annotation_font_point_size(options.annotationFontPointSize, options.verbose)
+    s.setup_annotation_font_family(options.annotationFontFamily, options.verbose)
     if options.rangePadding:
         s.setup_range_padding(options.rangePadding, options.verbose)
     s.setup_output_dir(options.outputDir, options.verbose)
