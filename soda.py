@@ -358,49 +358,49 @@ class Soda:
         """
         if textSize == 6 or textSize == 8 or textSize == 10:
             if labelWidth <= 20:
-                this.track_label_column_width = int(float(labelWidth) * 3.18)
+                this.track_label_column_width = float(labelWidth) * 3.16
             elif labelWidth >= 21 and labelWidth <= 45:
-                this.track_label_column_width = int(float(labelWidth) * 2.95)
+                this.track_label_column_width = float(labelWidth) * 2.95
             elif labelWidth > 45:
-                this.track_label_column_width = int(float(labelWidth) * 2.83)
+                this.track_label_column_width = float(labelWidth) * 2.83
         elif textSize == 12:
             if labelWidth <= 30:
-                this.track_label_column_width = int(float(labelWidth) * 3.45)
+                this.track_label_column_width = float(labelWidth) * 3.45
             elif labelWidth >= 31 and labelWidth <= 45:
-                this.track_label_column_width = int(float(labelWidth) * 3.32)
+                this.track_label_column_width = float(labelWidth) * 3.32
             elif labelWidth >= 46:
-                this.track_label_column_width = int(float(labelWidth) * 3.28)
+                this.track_label_column_width = float(labelWidth) * 3.28
         elif textSize == 14:
             if labelWidth <= 30:
-                this.track_label_column_width = int(float(labelWidth) * 3.85)
+                this.track_label_column_width = float(labelWidth) * 3.85
             elif labelWidth >= 31 and labelWidth <= 45:
-                this.track_label_column_width = int(float(labelWidth) * 3.78)
+                this.track_label_column_width = float(labelWidth) * 3.78
             elif labelWidth >= 46:
-                this.track_label_column_width = int(float(labelWidth) * 3.74)
+                this.track_label_column_width = float(labelWidth) * 3.74
         elif textSize == 18:
             if labelWidth <= 30:
-                this.track_label_column_width = int(float(labelWidth) * 4.76)
+                this.track_label_column_width = float(labelWidth) * 4.76
             elif labelWidth >= 31 and labelWidth <= 45:
-                this.track_label_column_width = int(float(labelWidth) * 4.69)
+                this.track_label_column_width = float(labelWidth) * 4.69
             elif labelWidth >= 46:
-                this.track_label_column_width = int(float(labelWidth) * 4.47)
+                this.track_label_column_width = float(labelWidth) * 4.47
         elif textSize == 24:
             if labelWidth <= 30:
-                this.track_label_column_width = int(float(labelWidth) * 6.58)
+                this.track_label_column_width = float(labelWidth) * 6.58
             elif labelWidth >= 31 and labelWidth <= 45:
-                this.track_label_column_width = int(float(labelWidth) * 5.94)
+                this.track_label_column_width = float(labelWidth) * 5.94
             elif labelWidth >= 46:
-                this.track_label_column_width = int(float(labelWidth) * 4.45)
+                this.track_label_column_width = float(labelWidth) * 4.45
         elif textSize == 34:
             if labelWidth <= 30:
-                this.track_label_column_width = int(float(labelWidth) * 8.39)
+                this.track_label_column_width = float(labelWidth) * 8.39
             elif labelWidth >= 31 and labelWidth <= 45:
-                this.track_label_column_width = int(float(labelWidth) * 6.00)
+                this.track_label_column_width = float(labelWidth) * 6.00
             elif labelWidth >= 46:
-                this.track_label_column_width = int(float(labelWidth) * 4.50)
+                this.track_label_column_width = float(labelWidth) * 4.50
 
         # shift offset one pixel from the left edge border
-        this.track_label_column_width = this.track_label_column_width + 1
+        this.track_label_column_width = this.track_label_column_width - 1
         
         if debug:
             sys.stderr.write("Debug: Track label column width set to [%d] pixels\n" % (this.track_label_column_width))
