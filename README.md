@@ -42,18 +42,20 @@ $ git clone https://github.com/Altius/soda.git
 
 ## Dependencies
 
-From an Altius HPCA cluster schedule host (`sched0.altiusinstitute.org`), add two modules to satisfy some dependencies, before running `soda.py`:
+From an Altius HPCA cluster schedule or compute host (*e.g.*, `sched0.altiusinstitute.org`), add two modules to satisfy some dependencies, before running `soda.py`:
 
 ```bash
 $ module add anaconda
 $ module add ImageMagick
 ```
 
-Both of these modules are required to run `soda.py` from this host.
+Both of these modules are required to run `soda.py` from an HPCA cluster host.
 
 ### Note
 
-You do not necessarily need to run this from `sched0`. However, if you run this script locally, such from another host in the lab, or on your personal workstation or laptop, you may need to use `pip` or similar to add Python libraries that may not be part of a typical environment:
+You do not necessarily need to run this from `sched0` or other HPCA cluster host. 
+
+However, if you run this script locally, such from another host in the lab, or on your personal workstation or laptop, you may need to use `pip` or similar to add Python libraries that may not be part of a typical environment:
 
 * [requests](https://pypi.python.org/pypi/requests)
 * [Beautiful Soup](https://pypi.python.org/pypi/beautifulsoup4)
@@ -165,4 +167,4 @@ Use `-v` or `--verbose` to print debug messages, which may be useful for automat
 
 ## Credits
 
-Authored in various `bash`- and Perl-flavored incarnations since 2008 by Bob Thurman, Richard Sandstrom, Scott Kuehn, Jay Hesselberth, Richard Humbert, Brady Miller and Alex Reynolds. Python rewrite was authored by Alex Reynolds.
+Authored in various `bash`- and Perl-flavored incarnations and tweaked since 2008 by Bob Thurman, Richard Sandstrom, Scott Kuehn, Jay Hesselberth, Richard Humbert, Brady Miller and Alex Reynolds. The Python rewrite in 2016 was authored by Alex Reynolds.
