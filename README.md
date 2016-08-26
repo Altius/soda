@@ -5,7 +5,7 @@ Python-based soda-plot gallery generator
 - [Dependencies](#dependencies)
 - [Usage](#usage)
 - [Options](#options)
-- [Credit](#credit)
+- [Credits](#credits)
 
 ## Description
 
@@ -163,6 +163,6 @@ Use these two options to specify a username and password for the browser instanc
 
 Use `-v` or `--verbose` to print debug messages, which may be useful for automation or debugging.
 
-## Credit
+## Credits
 
 Authored in various `bash`- and Perl-flavored incarnations since 2008 by Bob Thurman, Richard Sandstrom, Scott Kuehn, Jay Hesselberth, Richard Humbert, Brady Miller and Alex Reynolds. Python rewrite was authored by Alex Reynolds.
