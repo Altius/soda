@@ -52,9 +52,16 @@ Both of these modules are required to run `soda.py` from this host.
 
 ### Note
 
-You do not necessarily need to run this from `sched0`. However, if you run this script locally, such from another host in the lab, or on your personal workstation or laptop, you may need to use `pip` or similar to add Python libraries like [requests](https://pypi.python.org/pypi/requests), [Beautiful Soup](https://pypi.python.org/pypi/beautifulsoup4) and [Jinja2](https://pypi.python.org/pypi/Jinja2), as well as a package manager to install [ImageMagick](http://www.imagemagick.org) and [Ghostscript](http://www.ghostscript.com/).
+You do not necessarily need to run this from `sched0`. However, if you run this script locally, such from another host in the lab, or on your personal workstation or laptop, you may need to use `pip` or similar to add Python libraries that may not be part of a typical environment:
 
-Installing these dependencies may also require administrator privileges. In this case, please see the documentation for these components for installation instructions, or contact IT support for assistance.
+* [requests](https://pypi.python.org/pypi/requests)
+* [Beautiful Soup](https://pypi.python.org/pypi/beautifulsoup4)
+* [Jinja2](https://pypi.python.org/pypi/Jinja2)
+* [pdfrw](https://pypi.python.org/pypi/pdfrw)
+
+It may be useful to use a package manager to add [ImageMagick](http://www.imagemagick.org) and [Ghostscript](http://www.ghostscript.com/), if not already installed.
+
+Installing these dependencies may also require administrator privileges. In this case, please see the documentation for these components for installation instructions, or contact your local IT support for assistance.
 
 ## Usage
 
@@ -78,6 +85,36 @@ which opens the gallery index in the default web browser.
 
 ## Options
 
+### Required
+
+Four options are required. At minimum:
+
+```bash
+-r, --regionsFn
+```
+
+Use `-r` or `--regionsFn` to specify the path to the input BED file containing regions of interest.
+
+```bash
+-b, --browserBuildID
+```
+
+The `-b` or `--browserBuildID` option specifies the genome build, *e.g.*, `hg19`, `mm10`, etc.
+
+```bash
+-s, --browserSessionID
+```
+
+The `-s` or `--browserSessionID` option specify the browser session ID, which references a configuration of tracks and display parameters from a genome browser instance.
+
+```bash
+-o, --outputDir
+```
+
+Use the `-o` or `--outputDir` option to specify where the image gallery is saved. If this path already exists, `soda.py` will exit with a fatal error message.
+
+### Optional
+
 Other options are available depending on how you want to customize the run.
 
 ```bash
@@ -85,6 +122,20 @@ Other options are available depending on how you want to customize the run.
 ```
 
 Use `-t` or `--title` to specify a gallery title.
+
+```bash
+[ -i, --addIntervalAnnotation | -d, --addMidpointAnnotation ]
+```
+
+Use `-i` or `--addIntervalAnnotation` to add a rectangle underneath all tracks that demarcates the original genomic range (useful when used with `--range`). Alternatively, use `-d` or `--addMidpointAnnotation` to add a vertical line underneath all tracks, centered on the midpoint of the input genomic range. In both cases, the annotation is labeled with the genomic coordinates of the original interval or the calculated midpoint, respectively. It is not allowed to specify both options together.
+
+```bash
+-w, --annotationRgba
+-z, --annotationFontPointSize
+-f, --annotationFontFamily
+```
+
+When used with `-i` or `-d` to add an interval or midpoint annotation, these options may be used to override the default [`rgba()` color](http://www.w3schools.com/cssref/css_colors_legal.asp), typeface point size, and typeface family (where supported by the local installation of ImageMagick), which are parameters used to render the appearance of the annotation components. The default color is `rgba(255, 0, 0, 0.333)` and the default point size and font family values are `5` and `Helvetica-Bold`, respectively. 
 
 ```bash
 -a, --range
