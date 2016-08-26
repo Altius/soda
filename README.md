@@ -42,7 +42,7 @@ $ git clone https://github.com/Altius/soda.git
 
 ## Dependencies
 
-From an Altius HPCA cluster schedule or compute host (*e.g.*, `sched0.altiusinstitute.org`), add two modules to satisfy some dependencies, before running `soda.py`:
+From an Altius HPCA cluster schedule or compute host (*e.g.*, `sched0.altiusinstitute.org` or by way of a job submission via `squeue`), add two modules to satisfy dependencies, before running `soda.py`:
 
 ```bash
 $ module add anaconda
@@ -53,7 +53,7 @@ Both of these modules are required to run `soda.py` from an HPCA cluster host.
 
 ### Note
 
-You do not necessarily need to run this from `sched0` or other HPCA cluster host. 
+You do not necessarily need to run this from `sched0` or an HPCA cluster host. 
 
 However, if you run this script locally, such from another host in the lab, or on your personal workstation or laptop, you may need to use `pip` or similar to add Python libraries that may not be part of a typical environment:
 
