@@ -285,8 +285,8 @@ class Soda:
                     try:
                         region_elements[1] = str(int(region_elements[1]) - this.range_padding)
                         region_elements[2] = str(int(region_elements[2]) + this.range_padding)
-                        if region_elements[1] < 0:
-                            region_elements[1] = 0
+                        if int(region_elements[1]) < 0:
+                            region_elements[1] = '0'
                     except IndexError as ie:
                         sys.stderr.write("Error: Region elements are [%d | %s]\n" % (len(region_elements), region_elements))
                         sys.exit(-1)
@@ -398,13 +398,10 @@ class Soda:
                 this.track_label_column_width = float(labelWidth) * 6.00
             elif labelWidth >= 46:
                 this.track_label_column_width = float(labelWidth) * 4.50
-
         # shift offset one pixel from the left edge border
         this.track_label_column_width = this.track_label_column_width - 1
-        
         if debug:
             sys.stderr.write("Debug: Track label column width set to [%d] pixels\n" % (this.track_label_column_width))
-
 
     def generate_pdfs_from_annotated_regions(this, debug):
         with open(this.temp_annotated_regions_fn, "r") as temp_annotated_regions_fh:
