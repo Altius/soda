@@ -145,7 +145,7 @@ When used with `-i` or `-d` to add an interval or midpoint annotation, these opt
 -j, --outputPngResolution
 ```
 
-To reduce file sizes and improve gallery generation speed, PNG-formatted bitmaps are made from the PDF-formatted browser shots with a default resolution of 150 dpi. This value can be overridden with a custom resolution setting to create lower- or higher-quality bitmaps. Note that a higher resolution setting (e.g., 300 or 600 dpi) will require more processing time and the final gallery product will use more disk space.
+To reduce file sizes and improve gallery generation speed, PNG-formatted bitmaps are made from the PDF-formatted browser shots with a default resolution of 150 dpi. This value can be overridden with a custom resolution setting to create lower- or higher-quality bitmaps. Note that a higher resolution setting (*e.g.*, 300 or 600 dpi) will require more processing time and the final gallery product will use more disk space.
 
 ```bash
 -a, --range
