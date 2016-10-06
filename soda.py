@@ -43,8 +43,14 @@ default_verbosity = False
 default_midpoint_annotation = False
 default_interval_annotation = False
 default_annotation_rgba = "rgba(255, 0, 0, 0.333)" # i.e., full red with 33% opacity
-default_annotation_font_size = "5"
+default_annotation_font_size = "5.5"
 default_annotation_font_family = "Helvetica"
+default_output_png_resolution = 150
+default_output_png_thumbnail_width = 480
+default_output_png_thumbnail_height = 480
+default_annotation_resolution = default_output_png_resolution
+default_ucsc_browser_label_area_width = 17
+default_ucsc_browser_text_size = 8
 
 parser = optparse.OptionParser()
 parser.add_option("-r", "--regionsFn", action="store", type="string", dest="regionsFn", help="Path to BED-formatted regions of interest (required)")
@@ -60,6 +66,8 @@ parser.add_option("-i", "--addIntervalAnnotation", action="store_true", dest="in
 parser.add_option("-w", "--annotationRgba", action="store", type="string", dest="annotationRgba", default=default_annotation_rgba, help="Annotation 'rgba(r,g,b,a)' color string (optional)")
 parser.add_option("-z", "--annotationFontPointSize", action="store", type="string", dest="annotationFontPointSize", default=default_annotation_font_size, help="Annotation font point size (optional)")
 parser.add_option("-f", "--annotationFontFamily", action="store", type="string", dest="annotationFontFamily", default=default_annotation_font_family, help="Annotation font family (optional)")
+parser.add_option("-e", "--annotationResolution", action="store", type="string", dest="annotationResolution", default=default_annotation_resolution, help="Annotation resolution, dpi (optional)")
+parser.add_option("-j", "--outputPngResolution", action="store", type="string", dest="outputPngResolution", default=default_output_png_resolution, help="Output PNG resolution, dpi (optional)")
 parser.add_option("-a", "--range", action="store", type="int", dest="rangePadding", help="Add or remove symmetrical padding to input regions (optional)")
 parser.add_option("-l", "--gallerySrcDir", action="store", type="string", dest="gallerySrcDir", help="Blueimp Gallery resources directory (optional)")
 parser.add_option("-c", "--octiconsSrcDir", action="store", type="string", dest="octiconsSrcDir", help="Github Octicons resources directory (optional)")
@@ -104,13 +112,14 @@ class Soda:
         self.range_padding = None
         self.convert_bin_fn = None
         self.identify_bin_fn = None
-        self.output_png_resolution = 600
-        self.output_png_thumbnail_width = 480
-        self.output_png_thumbnail_height = 480
+        self.output_png_resolution = default_output_png_resolution
+        self.output_png_thumbnail_width = default_output_png_thumbnail_width
+        self.output_png_thumbnail_height = default_output_png_thumbnail_height
         self.midpoint_annotation = default_midpoint_annotation
         self.interval_annotation = default_interval_annotation
         self.annotation_rgba = default_annotation_rgba
         self.annotation_font_family = default_annotation_font_family
+        self.annotation_resolution = default_annotation_resolution
         self.track_label_column_width = None
 
     def setup_midpoint_annotation(this, midpointAnnotation, debug):
@@ -143,6 +152,16 @@ class Soda:
         this.annotation_font_family = annotationFontFamily
         if debug:
             sys.stderr.write("Debug: Annotation font family set to [%s]\n" % (this.annotation_font_family))
+
+    def setup_annotation_resolution(this, annotationResolution, debug):
+        this.annotation_resolution = int(annotationResolution)
+        if debug:
+            sys.stderr.write("Debug: Annotation resolution string set to [%s]\n" % (this.annotation_resolution))
+
+    def setup_output_png_resolution(this, outputPngResolution, debug):
+        this.output_png_resolution = int(outputPngResolution)
+        if debug:
+            sys.stderr.write("Debug: Output PNG resolution string set to [%s]\n" % (this.output_png_resolution))
 
     def setup_range_padding(this, rangePadding, debug):
         this.range_padding = rangePadding
@@ -357,7 +376,9 @@ class Soda:
           cf. https://groups.google.com/a/soe.ucsc.edu/d/msg/genome/TNnukmFSiVI/pimG80jQBAAJ
         """
         if textSize == 6 or textSize == 8 or textSize == 10:
-            if labelWidth <= 20:
+            if labelWidth <= 17:
+                this.track_label_column_width = float(labelWidth) * 4.40
+            elif labelWidth >= 18 and labelWidth <= 20:
                 this.track_label_column_width = float(labelWidth) * 3.16
             elif labelWidth >= 21 and labelWidth <= 45:
                 this.track_label_column_width = float(labelWidth) * 2.95
@@ -415,7 +436,6 @@ class Soda:
                 }
                 region_id = region_obj['id']
                 this.region_objs.append(region_obj)
-                this.region_ids.append(region_id)
                 this.generate_pdf_from_annotated_region(region_obj, region_id, debug)
 
     def generate_pdf_from_annotated_region(this, region_obj, region_id, debug):
@@ -446,6 +466,8 @@ class Soda:
         for browser_cartdump_line in browser_cartdump_lines:
             try:
                 browser_cartdump_line_values = browser_cartdump_line.rstrip().split(' ')
+                if debug:
+                    sys.stderr.write("Debug: Cart dump lines: [%s]\n" % (browser_cartdump_line_values))
             except ValueError as ve:
                 sys.stderr.write("Error: Could not parse cartDump response [%s]" % (browser_cartdump_response_content))
                 sys.exit(-1)
@@ -453,6 +475,10 @@ class Soda:
                 browser_cartdump_textSize = browser_cartdump_line_values[1]
             elif browser_cartdump_line_values[0] == 'hgt.labelWidth':
                 browser_cartdump_hgt_labelWidth = browser_cartdump_line_values[1]
+        if browser_cartdump_textSize is None:
+            browser_cartdump_textSize = default_ucsc_browser_text_size
+        if browser_cartdump_hgt_labelWidth is None:
+            browser_cartdump_hgt_labelWidth = default_ucsc_browser_label_area_width
         if debug:
             sys.stderr.write("Debug: Cart dump textSize and hgt.labelWidth are: [%s] and [%s]\n" % (browser_cartdump_textSize, browser_cartdump_hgt_labelWidth))
         this.setup_track_label_column_width(int(browser_cartdump_textSize), int(browser_cartdump_hgt_labelWidth), debug)
@@ -472,11 +498,15 @@ class Soda:
         modified_browser_pdf_url = this.browser_pdf_url + "&position=" + encoded_browser_position_str
         if debug:
             sys.stderr.write("Debug: Requesting PDF via: [%s]\n" % (modified_browser_pdf_url))
-        browser_pdf_url_response = requests.get(
-            url = modified_browser_pdf_url,
-            auth = browser_credentials,
-            verify = False
-        )
+        try:
+            browser_pdf_url_response = requests.get(
+                url = modified_browser_pdf_url,
+                auth = browser_credentials,
+                verify = False
+            )
+        except requests.exceptions.ChunkedEncodingError as err:
+            sys.stderr.write("Warning: Could not retrieve PDF for region [%s]\n" % (encoded_browser_position_str))
+            return
         browser_pdf_url_soup = bs4.BeautifulSoup(browser_pdf_url_response.text, "html.parser")
         browser_pdf_url_soup_hrefs = []
         for anchor in browser_pdf_url_soup.find_all('a'):
@@ -512,6 +542,7 @@ class Soda:
         os.remove(cart_dump_fn)
         if this.midpoint_annotation or this.interval_annotation:
             this.generate_pdf_with_annotation(browser_pdf_local_fn, region_obj, debug)
+        this.region_ids.append(region_id)
 
     def generate_pdf_with_annotation(this, browser_pdf_local_fn, region_obj, debug):
         # get dimensions of browser PDF with 'identify'
@@ -571,9 +602,9 @@ class Soda:
                 adj_start = full_start
                 adj_stop = full_stop
                 adj_ratio = 1.0
-            adj_track_column_width = int(track_column_width * adj_ratio)
+            adj_track_column_width = float(track_column_width * adj_ratio)
             adj_track_width_difference = track_column_width - adj_track_column_width
-            adj_track_x_offset = int(float(adj_track_width_difference) / 2.0)
+            adj_track_x_offset = float(adj_track_width_difference) / 2.0
             adj_track_column_height = int(browser_pdf_height) + top_padding
             svg_rect_x = leftmost_column_width + adj_track_x_offset
             svg_rect_y = 0
@@ -600,9 +631,9 @@ class Soda:
             svg_local_fh.write(svg)
         if debug:
             sys.stderr.write("Debug: Written SVG watermark to [%s]\n" % (svg_local_fn))
-        # `convert` SVG to PDF with high density
+        # `convert` SVG to PDF with specified annotation resolution
         svg_as_pdf_local_fn = os.path.join(this.temp_pdf_results_dir, 'watermark.pdf')
-        convert_cmd = '%s -density %d %s -background white -flatten %s' % (this.convert_bin_fn, this.output_png_resolution, svg_local_fn, svg_as_pdf_local_fn)
+        convert_cmd = '%s -density %d %s -background white -flatten %s' % (this.convert_bin_fn, this.annotation_resolution, svg_local_fn, svg_as_pdf_local_fn)
         try:
             convert_result = subprocess.check_output(convert_cmd, shell = True)
         except subprocess.CalledProcessError as err:
@@ -634,6 +665,7 @@ class Soda:
     def generate_png_from_pdf(this, region_id, debug):
         browser_pdf_local_fn = os.path.join(this.temp_pdf_results_dir, region_id + '.pdf')
         browser_png_local_fn = os.path.join(this.temp_png_results_dir, region_id + '.png')
+        # convert PDF to PNG with specified output resolution
         convert_cmd = '%s -density %d %s -background white -flatten %s' % (this.convert_bin_fn, this.output_png_resolution, browser_pdf_local_fn, browser_png_local_fn)
         try:
             convert_result = subprocess.check_output(convert_cmd, shell = True)
@@ -815,6 +847,8 @@ def main():
     s.setup_annotation_rgba(options.annotationRgba, options.verbose)
     s.setup_annotation_font_point_size(options.annotationFontPointSize, options.verbose)
     s.setup_annotation_font_family(options.annotationFontFamily, options.verbose)
+    s.setup_annotation_resolution(options.annotationResolution, options.verbose)
+    s.setup_output_png_resolution(options.outputPngResolution, options.verbose)
     if options.rangePadding:
         s.setup_range_padding(options.rangePadding, options.verbose)
     s.setup_output_dir(options.outputDir, options.verbose)

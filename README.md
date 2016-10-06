@@ -136,9 +136,16 @@ Use `-i` or `--addIntervalAnnotation` to add a rectangle underneath all tracks t
 -w, --annotationRgba
 -z, --annotationFontPointSize
 -f, --annotationFontFamily
+-e, --annotationResolution
 ```
 
-When used with `-i` or `-d` to add an interval or midpoint annotation, these options may be used to override the default [`rgba()` color](http://www.w3schools.com/cssref/css_colors_legal.asp), typeface point size, and typeface family (where supported by the local installation of ImageMagick), which are parameters used to render the appearance of the annotation components. The default color is `rgba(255, 0, 0, 0.333)` and the default point size and font family values are `5` and `Helvetica-Bold`, respectively. 
+When used with `-i` or `-d` to add an interval or midpoint annotation, these options may be used to override the default [`rgba()` color](http://www.w3schools.com/cssref/css_colors_legal.asp), typeface point size, and typeface family (where supported by the local installation of ImageMagick), which are parameters used to render the appearance of the annotation components. The default color is `rgba(255, 0, 0, 0.333)` and the default point size and font family values are `5.5` and `Helvetica`, respectively. To keep the file size of the final PDF reasonable, a default resolution for the annotation is set at 150 dpi. This value can be increased, if desired, by overriding this setting. A higher resolution will require more processing time and create larger files.
+
+```bash
+-j, --outputPngResolution
+```
+
+To reduce file sizes and improve gallery generation speed, PNG-formatted bitmaps are made from the PDF-formatted browser shots with a default resolution of 150 dpi. This value can be overridden with a custom resolution setting to create lower- or higher-quality bitmaps. Note that a higher resolution setting (e.g., 300 or 600 dpi) will require more processing time and the final gallery product will use more disk space.
 
 ```bash
 -a, --range
