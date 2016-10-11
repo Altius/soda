@@ -377,7 +377,7 @@ class Soda:
         """
         if textSize == 6 or textSize == 8 or textSize == 10:
             if labelWidth <= 17:
-                this.track_label_column_width = float(labelWidth) * 4.40
+                this.track_label_column_width = float(labelWidth) * 3.16 #4.40
             elif labelWidth >= 18 and labelWidth <= 20:
                 this.track_label_column_width = float(labelWidth) * 3.16
             elif labelWidth >= 21 and labelWidth <= 45:
