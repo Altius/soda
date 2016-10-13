@@ -32,30 +32,31 @@ $ sort -k5,5n input.bed > input_sorted_by_scores.bed
 
 Any ordering is allowed. Gallery snapshots are presented in the same order as rows in the input BED file.
 
-## Download
+## Installation
 
-To grab this kit, you can clone it from Github:
+You can install this from the HPCA module system or clone the code locally. We recommend using the module system.
+
+### Modules
+
+From an Altius host which uses the HPCA module system (*e.g.*, `sched0.altiusinstitute.org` or by way of a job submission via `squeue`), add the following module to satisfy dependencies, before running `soda.py`:
+
+```bash
+$ module add soda
+```
+
+Adding the `soda` module adds `anaconda` and `ImageMagick` modules. Both of these modules are required to run `soda.py` from an HPCA host.
+
+### Download
+
+To grab this kit and run it locally, you can clone it from Github:
 
 ```bash
 $ git clone https://github.com/Altius/soda.git
 ```
 
-## Dependencies
+#### Note
 
-From an Altius HPCA cluster schedule or compute host (*e.g.*, `sched0.altiusinstitute.org` or by way of a job submission via `squeue`), add two modules to satisfy dependencies, before running `soda.py`:
-
-```bash
-$ module add anaconda
-$ module add ImageMagick
-```
-
-Both of these modules are required to run `soda.py` from an HPCA cluster host.
-
-### Note
-
-You do not necessarily need to run this from `sched0` or an HPCA cluster host. 
-
-However, if you run this script locally, such from another host in the lab, or on your personal workstation or laptop, you may need to use `pip` or similar to add Python libraries that may not be part of a typical environment:
+If you run this script via the Git repository, such from a non-modules host in the lab, or on your personal workstation or laptop, you may need to use `pip` or similar to add Python libraries that may not be part of a typical environment:
 
 * [requests](https://pypi.python.org/pypi/requests)
 * [Beautiful Soup](https://pypi.python.org/pypi/beautifulsoup4)
