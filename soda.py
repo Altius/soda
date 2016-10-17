@@ -26,6 +26,7 @@ import os
 import tempfile
 import shutil
 import requests
+import requests_kerberos
 import optparse
 import urllib
 import json
@@ -35,10 +36,10 @@ import subprocess
 import jinja2
 import pdfrw
 
-default_title = "Untitled Gallery"
+default_title = "Soda Gallery"
 default_genome_browser_url = "https://gb1.altiusinstitute.org"
-default_genome_browser_username = "encode"
-default_genome_browser_password = "associ8"
+default_genome_browser_username = None
+default_genome_browser_password = None
 default_verbosity = False
 default_midpoint_annotation = False
 default_interval_annotation = False
@@ -103,7 +104,8 @@ class Soda:
         self.browser_dump_url = None
         self.browser_pdf_url = None
         self.browser_session_id = None
-        self.browser_session_credentials = False
+        self.browser_session_kerberos_credentials = True
+        self.browser_session_basic_credentials = False
         self.browser_session_username = None
         self.browser_session_password = None
         self.browser_build_id = None
@@ -328,22 +330,22 @@ class Soda:
 
     def setup_browser_url(this, browserURL, debug):
         this.browser_url = browserURL
-        if browserURL != default_genome_browser_url:
-            options.browserUsername = None
-            options.browserPassword = None
-            sys.stderr.write("Warning: Browser URL was changed from default; credentials were blanked out\n")
         if debug:
             sys.stderr.write("Debug: Browser URL set to [%s]\n" % (this.browser_url))
         
     def setup_browser_username(this, browserUsername, debug):
         this.browser_username = browserUsername
-        this.browser_session_credentials = True
+        if this.browser_username:
+            this.browser_session_basic_credentials = True
+            this.browser_session_kerberos_credentials = False
         if debug:
             sys.stderr.write("Debug: Browser username set to [%s]\n" % (this.browser_username))
 
     def setup_browser_password(this, browserPassword, debug):
         this.browser_password = browserPassword
-        this.browser_session_credentials = True
+        if this.browser_password:
+            this.browser_session_basic_credentials = True
+            this.browser_session_kerberos_credentials = False
         if debug:
             sys.stderr.write("Debug: Browser password set to [%s]\n" % (this.browser_password))
 
@@ -450,14 +452,24 @@ class Soda:
         if debug:
             sys.stderr.write("Debug: Submitting POST body [%s] to request\n" % (browser_post_body))
         browser_credentials = None
-        if this.browser_session_credentials:
+        if this.browser_session_basic_credentials:
             browser_credentials = requests.auth.HTTPBasicAuth(this.browser_username, this.browser_password)
+        elif this.browser_session_kerberos_credentials:
+            browser_credentials = requests_kerberos.HTTPKerberosAuth(mutual_authentication=requests_kerberos.OPTIONAL)
         browser_cartdump_response = requests.post(
             url = this.browser_dump_url,
             data = browser_post_body,
             auth = browser_credentials,
             verify = False,
         )
+        if debug:
+            sys.stderr.write("Debug: Credentials [%s]\n" % (str(browser_credentials)))
+        if browser_cartdump_response.status_code == 401:
+            sys.stderr.write("Error: No credentials available -- please use 'kinit' to set up a Kerberos ticket, or specify a Basic username and password\n")
+            sys.exit(-1)
+        elif browser_cartdump_response.status_code != 200:
+            sys.stderr.write("Error: Access to genome browser failed\nStatus\t[%d]\nHeaders\t[%s]\nText\t[%s]" % (browser_cartdump_response.status_code, browser_cartdump_response.headers, browser_cartdump_response.text))
+            sys.exit(-1)
         # get cart dump
         browser_cartdump_response_content = browser_cartdump_response.content
         browser_cartdump_textSize = None # textSize

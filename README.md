@@ -59,6 +59,7 @@ $ git clone https://github.com/Altius/soda.git
 If you run this script via the Git repository, such from a non-modules host in the lab, or on your personal workstation or laptop, you may need to use `pip` or similar to add Python libraries that may not be part of a typical environment:
 
 * [requests](https://pypi.python.org/pypi/requests)
+* [requests-kerberos](https://pypi.python.org/pypi/requests-kerberos)
 * [Beautiful Soup](https://pypi.python.org/pypi/beautifulsoup4)
 * [Jinja2](https://pypi.python.org/pypi/Jinja2)
 * [pdfrw](https://pypi.python.org/pypi/pdfrw)
@@ -69,7 +70,7 @@ Installing these dependencies may also require administrator privileges. In this
 
 ## Usage
 
-As a usage example, you may have a BED file in some home directory called `/home/abc/regions.bed`. You have a session ID for the `gb1` Altius genome browser instance called `123456_abcdef`, with all your tracks selected and display parameters set, using `hg38` as the reference genome build. Finally, you want to store the results in a folder called `/home/abc/public_html/my-soda-plot-results` where it can be shared publicly with others via a web browser:
+As a usage example, you may have a BED file in some home directory called `/home/abc/regions.bed`. You have a session ID for the `gb1` Altius genome browser instance called `123456_abcdef`, with all your tracks selected and display parameters set, using `hg38` as the reference genome build. Finally, you want to store the results in a folder called `/home/abc/public_html/my-soda-plot-results` where it can be shared publicly with others via a web browser. Here is a sample command that generates the desired gallery:
 
 ```bash
 $ /path/to/soda.py -r "/home/abc/regions.bed" -b "hg38" -s "123456_abcdef" -o "/home/abc/public_html/my-soda-plot-results"
@@ -86,6 +87,10 @@ $ open /Users/abc/my-soda-plot-results/index.html
 ```
 
 which opens the gallery index in the default web browser.
+
+### Note
+
+If you are obtaining plots from the `gb1.altiusinstitute.org` UCSC browser instance, it may be necessary to first set up a Kerberos ticket that authenticates you as a valid user of this service. You would first run `kinit` at the command-line prompt, and then you would enter your Altius domain password. Once you have a valid ticket, you can run `soda.py` as many times as you want, for as long as that ticket is valid (generally a ticket is valid for up to ten hours) &emdash; re-running `kinit` is only necessary once your ticket has expired.
 
 ## Options
 
