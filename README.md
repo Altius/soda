@@ -63,6 +63,7 @@ If you run this script via the Git repository, such from a non-modules host in t
 * [Beautiful Soup](https://pypi.python.org/pypi/beautifulsoup4)
 * [Jinja2](https://pypi.python.org/pypi/Jinja2)
 * [pdfrw](https://pypi.python.org/pypi/pdfrw)
+* [pdfminer](https://pypi.python.org/pypi/pdfminer)
 
 It may be useful to use a package manager to add [ImageMagick](http://www.imagemagick.org) and [Ghostscript](http://www.ghostscript.com/), if not already installed.
 
@@ -90,7 +91,7 @@ which opens the gallery index in the default web browser.
 
 ### Note
 
-If you are obtaining plots from the `gb1.altiusinstitute.org` UCSC browser instance, it may be necessary to first set up a Kerberos ticket that authenticates you as a valid user of this service. You would first run `kinit` at the command-line prompt, and then you would enter your Altius domain password. Once you have a valid ticket, you can run `soda.py` as many times as you want, for as long as that ticket is valid (generally a ticket is valid for up to ten hours) &emdash; re-running `kinit` is only necessary once your ticket has expired.
+If you are obtaining plots from the `gb1.altiusinstitute.org` UCSC browser instance, it may be necessary to first set up a Kerberos ticket that authenticates you as a valid user of this service. You would first run `kinit` at the command-line prompt, and then you would enter your Altius domain password. Once you have a valid ticket, you can run `soda.py` as many times as you want, for as long as that ticket is valid (generally a ticket is valid for up to ten hours). Re-running `kinit` is only necessary once your ticket has expired.
 
 ## Options
 

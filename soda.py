@@ -35,6 +35,7 @@ import re
 import subprocess
 import jinja2
 import pdfrw
+import ucsc_pdf_bbox_parser
 
 default_title = "Soda Gallery"
 default_genome_browser_url = "https://gb1.altiusinstitute.org"
@@ -369,63 +370,6 @@ class Soda:
         if debug:
             sys.stderr.write("Debug: Browser session ID set to [%s]\n" % (this.browser_session_id))
 
-    def setup_track_label_column_width(this, textSize, labelWidth, debug):
-        """
-        * multiplicative factors were derived approximately from measuring PDFs 
-          rendered from combinations of various text size and label width settings
-
-        * text size is guaranteed to be one of the following values per UCSC support:
-          cf. https://groups.google.com/a/soe.ucsc.edu/d/msg/genome/TNnukmFSiVI/pimG80jQBAAJ
-        """
-        if textSize == 6 or textSize == 8 or textSize == 10:
-            if labelWidth <= 17:
-                this.track_label_column_width = float(labelWidth) * 3.16 #4.40
-            elif labelWidth >= 18 and labelWidth <= 20:
-                this.track_label_column_width = float(labelWidth) * 3.16
-            elif labelWidth >= 21 and labelWidth <= 45:
-                this.track_label_column_width = float(labelWidth) * 2.95
-            elif labelWidth > 45:
-                this.track_label_column_width = float(labelWidth) * 2.83
-        elif textSize == 12:
-            if labelWidth <= 30:
-                this.track_label_column_width = float(labelWidth) * 3.45
-            elif labelWidth >= 31 and labelWidth <= 45:
-                this.track_label_column_width = float(labelWidth) * 3.32
-            elif labelWidth >= 46:
-                this.track_label_column_width = float(labelWidth) * 3.28
-        elif textSize == 14:
-            if labelWidth <= 30:
-                this.track_label_column_width = float(labelWidth) * 3.85
-            elif labelWidth >= 31 and labelWidth <= 45:
-                this.track_label_column_width = float(labelWidth) * 3.78
-            elif labelWidth >= 46:
-                this.track_label_column_width = float(labelWidth) * 3.74
-        elif textSize == 18:
-            if labelWidth <= 30:
-                this.track_label_column_width = float(labelWidth) * 4.76
-            elif labelWidth >= 31 and labelWidth <= 45:
-                this.track_label_column_width = float(labelWidth) * 4.69
-            elif labelWidth >= 46:
-                this.track_label_column_width = float(labelWidth) * 4.47
-        elif textSize == 24:
-            if labelWidth <= 30:
-                this.track_label_column_width = float(labelWidth) * 6.58
-            elif labelWidth >= 31 and labelWidth <= 45:
-                this.track_label_column_width = float(labelWidth) * 5.94
-            elif labelWidth >= 46:
-                this.track_label_column_width = float(labelWidth) * 4.45
-        elif textSize == 34:
-            if labelWidth <= 30:
-                this.track_label_column_width = float(labelWidth) * 8.39
-            elif labelWidth >= 31 and labelWidth <= 45:
-                this.track_label_column_width = float(labelWidth) * 6.00
-            elif labelWidth >= 46:
-                this.track_label_column_width = float(labelWidth) * 4.50
-        # shift offset one pixel from the left edge border
-        this.track_label_column_width = this.track_label_column_width - 1
-        if debug:
-            sys.stderr.write("Debug: Track label column width set to [%d] pixels\n" % (this.track_label_column_width))
-
     def generate_pdfs_from_annotated_regions(this, debug):
         with open(this.temp_annotated_regions_fn, "r") as temp_annotated_regions_fh:
             for region_line in temp_annotated_regions_fh:
@@ -493,7 +437,7 @@ class Soda:
             browser_cartdump_hgt_labelWidth = default_ucsc_browser_label_area_width
         if debug:
             sys.stderr.write("Debug: Cart dump textSize and hgt.labelWidth are: [%s] and [%s]\n" % (browser_cartdump_textSize, browser_cartdump_hgt_labelWidth))
-        this.setup_track_label_column_width(int(browser_cartdump_textSize), int(browser_cartdump_hgt_labelWidth), debug)
+
         # write response text to cartDump in temporary output folder
         cart_dump_fn = os.path.join(this.temp_pdf_results_dir, 'cartDump')
         if debug:
@@ -553,6 +497,12 @@ class Soda:
         # remove cartDump file
         os.remove(cart_dump_fn)
         if this.midpoint_annotation or this.interval_annotation:
+            # set the track_label_column_width based on the bounding box calculation
+            ucsc_pdf_bbox_parser.set_fn(browser_pdf_local_fn)
+            ucsc_pdf_bbox_parser.parse(debug)
+            bbox_x_l = ucsc_pdf_bbox_parser.get_bbox()[0]
+            bbox_x_r = ucsc_pdf_bbox_parser.get_bbox()[2]
+            this.track_label_column_width = bbox_x_r - ((bbox_x_r - bbox_x_l) / 2)
             this.generate_pdf_with_annotation(browser_pdf_local_fn, region_obj, debug)
         this.region_ids.append(region_id)
 
