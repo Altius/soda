@@ -19,8 +19,6 @@ problems with this utility.
 
 """
 
-#!/usr/bin/env python
-
 import sys
 from pdfminer.pdfparser import PDFParser
 from pdfminer.pdfdocument import PDFDocument
