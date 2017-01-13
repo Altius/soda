@@ -27,6 +27,7 @@ import tempfile
 import shutil
 import requests
 import requests_kerberos
+import certifi
 import optparse
 import urllib
 import json
@@ -404,7 +405,7 @@ class Soda:
             url = this.browser_dump_url,
             data = browser_post_body,
             auth = browser_credentials,
-            verify = False,
+            verify = True,
         )
         if debug:
             sys.stderr.write("Debug: Credentials [%s]\n" % (str(browser_credentials)))
@@ -458,7 +459,7 @@ class Soda:
             browser_pdf_url_response = requests.get(
                 url = modified_browser_pdf_url,
                 auth = browser_credentials,
-                verify = False
+                verify = True
             )
         except requests.exceptions.ChunkedEncodingError as err:
             sys.stderr.write("Warning: Could not retrieve PDF for region [%s]\n" % (encoded_browser_position_str))
@@ -485,7 +486,7 @@ class Soda:
             url = browser_pdf_url,
             stream = True,
             auth = browser_credentials,
-            verify = False,
+            verify = True,
         )
         browser_pdf_local_fn = os.path.join(this.temp_pdf_results_dir, region_obj['id'] + '.pdf')
         with open(browser_pdf_local_fn, 'wb') as browser_pdf_local_fh:
@@ -502,7 +503,7 @@ class Soda:
             ucsc_pdf_bbox_parser.parse(debug)
             bbox_x_l = ucsc_pdf_bbox_parser.get_bbox()[0]
             bbox_x_r = ucsc_pdf_bbox_parser.get_bbox()[2]
-            this.track_label_column_width = bbox_x_r - ((bbox_x_r - bbox_x_l) / 2)
+            this.track_label_column_width = bbox_x_r - ((bbox_x_r - bbox_x_l) / 2) + 1
             this.generate_pdf_with_annotation(browser_pdf_local_fn, region_obj, debug)
         this.region_ids.append(region_id)
 

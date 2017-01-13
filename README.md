@@ -89,10 +89,6 @@ $ open /Users/abc/my-soda-plot-results/index.html
 
 which opens the gallery index in the default web browser.
 
-### Note
-
-If you are obtaining plots from the `gb1.altiusinstitute.org` UCSC browser instance, it may be necessary to first set up a Kerberos ticket that authenticates you as a valid user of this service. You would first run `kinit` at the command-line prompt, and then you would enter your Altius domain password. Once you have a valid ticket, you can run `soda.py` as many times as you want, for as long as that ticket is valid (generally a ticket is valid for up to ten hours). Re-running `kinit` is only necessary once your ticket has expired.
-
 ## Options
 
 ### Required
