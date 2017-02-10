@@ -306,8 +306,13 @@ class Soda:
                 # adjust range, if set
                 if this.range_padding:
                     try:
-                        region_elements[1] = str(int(region_elements[1]) - this.range_padding)
-                        region_elements[2] = str(int(region_elements[2]) + this.range_padding)
+                        original_start = region_elements[1]
+                        original_stop = region_elements[2]      
+                        midpoint = int(region_elements[1]) + ((int(region_elements[2]) - int(region_elements[1])) / 2)
+                        region_elements[1] = str(int(midpoint) - this.range_padding)
+                        region_elements[2] = str(int(midpoint) + this.range_padding)
+                        #region_elements[1] = str(int(region_elements[1]) - this.range_padding)
+                        #region_elements[2] = str(int(region_elements[2]) + this.range_padding)
                         if int(region_elements[1]) < 0:
                             region_elements[1] = '0'
                     except IndexError as ie:
@@ -323,7 +328,7 @@ class Soda:
                 elif len(region_elements) == 3:
                     annotation_id = "_".join(['plot', str(counter).zfill(zero_padding), region_elements[0], region_elements[1], region_elements[2]])
                 if annotation_id:
-                    annotated_line = '\t'.join([region_elements[0], region_elements[1], region_elements[2], annotation_id]) + '\n'
+                    annotated_line = '\t'.join([region_elements[0], region_elements[1], region_elements[2], annotation_id, original_start, original_stop]) + '\n'
                     this.temp_annotated_regions_fh.write(annotated_line)
                 counter = counter + 1
         if debug:
@@ -376,10 +381,12 @@ class Soda:
             for region_line in temp_annotated_regions_fh:
                 region_elements = region_line.rstrip().split('\t')
                 region_obj = {
-                    u"chrom" : region_elements[0],
-                    u"start" : region_elements[1],
-                    u"stop"  : region_elements[2],
-                    u"id"    : region_elements[3]
+                    u"chrom"    : region_elements[0],
+                    u"start"    : region_elements[1],
+                    u"stop"     : region_elements[2],
+                    u"id"       : region_elements[3],
+                    u"o_start"  : region_elements[4],
+                    u"o_stop"   : region_elements[5]
                 }
                 region_id = region_obj['id']
                 this.region_objs.append(region_obj)
@@ -555,21 +562,19 @@ class Soda:
             svg = svg + '<text x="%d" y="%d" style="font-family:%s;fill:%s;font-size:%s">%s</text>' % (svg_text_x, svg_text_y, svg_text_font_family, svg_text_fill, svg_text_font_size, svg_text)
         elif this.interval_annotation:
             # draw <rect> element on SVG
-            full_start = int(region_obj['start'])
-            full_stop = int(region_obj['stop'])
-            if this.range_padding:
-                adj_start = full_start + this.range_padding
-                adj_stop = full_stop - this.range_padding
-                adj_ratio = float(adj_stop - adj_start) / float(full_stop - full_start) # fraction of annotated range that represents pre-range interval
-            else:
-                adj_start = full_start
-                adj_stop = full_stop
-                adj_ratio = 1.0
-            adj_track_column_width = float(track_column_width * adj_ratio)
-            adj_track_width_difference = track_column_width - adj_track_column_width
-            adj_track_x_offset = float(adj_track_width_difference) / 2.0
+            full_start = region_obj['start']
+            full_stop = region_obj['stop']
+            original_start = region_obj['o_start']
+            original_stop = region_obj['o_stop']
+            rect_width_in_bases = float(original_stop) - float(original_start)
+            column_width_in_bases = float(2.0 * this.range_padding)
+            ratio_of_rect_width_to_column_width = rect_width_in_bases / column_width_in_bases
+            rect_width_in_pixels = track_column_width * ratio_of_rect_width_to_column_width
+            column_rect_width_difference = track_column_width - rect_width_in_pixels
+            column_rect_offset = column_rect_width_difference / 2.0
+            adj_track_column_width = rect_width_in_pixels
             adj_track_column_height = int(browser_pdf_height) + top_padding
-            svg_rect_x = leftmost_column_width + adj_track_x_offset
+            svg_rect_x = leftmost_column_width + column_rect_offset
             svg_rect_y = 0
             svg_rect_width = adj_track_column_width
             svg_rect_height = adj_track_column_height
@@ -579,7 +584,7 @@ class Soda:
             svg = svg + '<rect x="%d" y="%d" width="%d" height="%d" style="fill:%s;stroke-width:%s;stroke:%s" />' % (svg_rect_x, svg_rect_y, svg_rect_width, svg_rect_height, svg_rect_fill, svg_rect_stroke_width, svg_rect_stroke)
             # draw <text> on SVG
             svg_text_chr = region_obj['chrom']
-            svg_text = '%s:%d-%d' % (svg_text_chr, adj_start, adj_stop)
+            svg_text = '%s:%d-%d' % (svg_text_chr, int(original_start), int(original_stop))
             svg_text_x = leftmost_column_width + (track_column_width / 2.0)
             svg_text_y = 8
             svg_text_fill = 'rgba(0,0,0,1)'
