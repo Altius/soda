@@ -298,6 +298,8 @@ class Soda:
             zero_padding = 6
             for region_line in region_fh:
                 region_elements = region_line.rstrip().split('\t')
+                original_start = region_elements[1]
+                original_stop = region_elements[2]      
                 annotation_id = None
                 # skip if blank line
                 if len(region_elements) == 1:
@@ -306,8 +308,6 @@ class Soda:
                 # adjust range, if set
                 if this.range_padding:
                     try:
-                        original_start = region_elements[1]
-                        original_stop = region_elements[2]      
                         midpoint = int(region_elements[1]) + ((int(region_elements[2]) - int(region_elements[1])) / 2)
                         region_elements[1] = str(int(midpoint) - this.range_padding)
                         region_elements[2] = str(int(midpoint) + this.range_padding)
