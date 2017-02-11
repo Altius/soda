@@ -169,6 +169,13 @@ Use the `-g` or `--browserURL` option to specify a different genome browser URL 
 
 Use these two options to specify a username and password for the browser instance, if you pick a different `--browserURL` and that browser instance requires credentials. If these options are not specified, no credentials are passed along. If authentication fails, `soda.py` may exit with an error.
 
+
+```bash
+-y, --useKerberosAuthentication
+```
+
+Use this option if access to your custom browser instance requires a Kerberos ticket (obtained via ``kinit``, for example).
+
 ```bash
 -v, --verbose
 ```
