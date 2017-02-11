@@ -108,7 +108,7 @@ class Soda:
         self.browser_dump_url = None
         self.browser_pdf_url = None
         self.browser_session_id = None
-        self.browser_session_kerberos_credentials = True
+        self.browser_session_kerberos_credentials = False
         self.browser_session_basic_credentials = False
         self.browser_session_username = None
         self.browser_session_password = None
@@ -353,6 +353,7 @@ class Soda:
             sys.stderr.write("Debug: Browser password set to [%s]\n" % (this.browser_password))
 
     def setup_browser_authentication_type(this, useKerberosCredentials, debug):
+        sys.stderr.write("Debug: useKerberosCredentials set to [%r]\n" % (useKerberosCredentials))
         if this.browser_username and this.browser_password:
             this.browser_session_basic_credentials = True
             this.browser_session_kerberos_credentials = False
