@@ -43,6 +43,7 @@ default_genome_browser_url = "https://gb1.altiusinstitute.org"
 default_genome_browser_username = None
 default_genome_browser_password = None
 default_verbosity = False
+default_use_kerberos_authentication = False
 default_midpoint_annotation = False
 default_interval_annotation = False
 default_annotation_rgba = "rgba(255, 0, 0, 0.333)" # i.e., full red with 33% opacity
@@ -64,6 +65,7 @@ parser.add_option("-t", "--galleryTitle", action="store", type="string", dest="g
 parser.add_option("-g", "--browserURL", action="store", type="string", dest="browserURL", default=default_genome_browser_url, help="Genome browser URL (optional)")
 parser.add_option("-u", "--browserUsername", action="store", type="string", dest="browserUsername", default=default_genome_browser_username, help="Genome browser username (optional)")
 parser.add_option("-p", "--browserPassword", action="store", type="string", dest="browserPassword", default=default_genome_browser_password, help="Genome browser password (optional)")
+parser.add_option("-y", "--useKerberosAuthentication", action="store_true", dest="useKerberosAuthentication", default=default_use_kerberos_authentication, help="Use Kerberos authentication (optional)")
 parser.add_option("-d", "--addMidpointAnnotation", action="store_true", dest="midpointAnnotation", default=default_midpoint_annotation, help="Add midpoint annotation underneath tracks (optional)")
 parser.add_option("-i", "--addIntervalAnnotation", action="store_true", dest="intervalAnnotation", default=default_interval_annotation, help="Add interval annotation underneath tracks (optional)")
 parser.add_option("-w", "--annotationRgba", action="store", type="string", dest="annotationRgba", default=default_annotation_rgba, help="Annotation 'rgba(r,g,b,a)' color string (optional)")
@@ -342,19 +344,24 @@ class Soda:
         
     def setup_browser_username(this, browserUsername, debug):
         this.browser_username = browserUsername
-        if this.browser_username:
-            this.browser_session_basic_credentials = True
-            this.browser_session_kerberos_credentials = False
         if debug:
             sys.stderr.write("Debug: Browser username set to [%s]\n" % (this.browser_username))
 
     def setup_browser_password(this, browserPassword, debug):
         this.browser_password = browserPassword
-        if this.browser_password:
-            this.browser_session_basic_credentials = True
-            this.browser_session_kerberos_credentials = False
         if debug:
             sys.stderr.write("Debug: Browser password set to [%s]\n" % (this.browser_password))
+
+    def setup_browser_authentication_type(this, useKerberosCredentials, debug):
+        if this.browser_username and this.browser_password:
+            this.browser_session_basic_credentials = True
+            this.browser_session_kerberos_credentials = False
+        if useKerberosCredentials:
+            this.browser_session_basic_credentials = False
+            this.browser_session_kerberos_credentials = True
+        if debug:
+            sys.stderr.write("Debug: Basic credentials set to [%r]\n" % (this.browser_session_basic_credentials))
+            sys.stderr.write("Debug: Kerberos credentials set to [%r]\n" % (this.browser_session_kerberos_credentials))
 
     def setup_browser_build_id(this, browserBuildID, debug):
         this.browser_build_id = browserBuildID
@@ -839,6 +846,7 @@ def main():
     s.setup_browser_url(options.browserURL, options.verbose)
     s.setup_browser_username(options.browserUsername, options.verbose)
     s.setup_browser_password(options.browserPassword, options.verbose)
+    s.setup_browser_authentication_type(options.useKerberosAuthentication, options.verbose)
     s.setup_browser_build_id(options.browserBuildID, options.verbose)
     s.setup_browser_session_id(options.browserSessionID, options.verbose)
     s.setup_browser_dump_url(options.verbose)

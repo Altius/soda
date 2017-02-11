@@ -154,7 +154,7 @@ To reduce file sizes and improve gallery generation speed, PNG-formatted bitmaps
 -a, --range
 ```
 
-Use the `-a` or `--range` option to pad the BED input's **midpoints* symmetrically by the specified number of bases. This works regardless of the sort order of the input.
+Use the `-a` or `--range` option to pad the BED input's **midpoints** symmetrically by the specified number of bases. This works regardless of the sort order of the input.
 
 ```bash
 -g, --browserURL
