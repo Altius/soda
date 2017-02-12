@@ -184,4 +184,6 @@ Use `-v` or `--verbose` to print debug messages, which may be useful for automat
 
 ## Credits
 
-Authored in various `bash`- and Perl-flavored incarnations and tweaked since 2008 by Bob Thurman, Richard Sandstrom, Scott Kuehn, Jay Hesselberth, Richard Humbert, Brady Miller and Alex Reynolds. The Python rewrite in 2016 was authored by Alex Reynolds.
+The general "soda" gallery tool has been authored in various `bash`- and Perl-flavored incarnations since 2008 by Bob Thurman, Richard Sandstrom, Scott Kuehn, Jay Hesselberth, Richard Humbert, Brady Miller and Alex Reynolds. This Python rewrite was authored by Alex Reynolds.
+
+This tool uses the [blueimp Gallery](https://github.com/blueimp/Gallery) and [Github octicons](https://github.com/primer/octicons) projects, both of which are MIT-licensed.
