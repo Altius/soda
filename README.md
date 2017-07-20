@@ -186,10 +186,10 @@ Use `-v` or `--verbose` to print debug messages, which may be useful for automat
 
 The general "soda" gallery tool has been authored in various `bash`- and Perl-flavored incarnations since 2008 by primary authors Richard Sandstrom and Scott Kuehn, with modifications over time by Bob Thurman, Jay Hesselberth, Richard Humbert, Brady Miller and Alex Reynolds.
 
-This Python rewrite was authored by Alex Reynolds.
+This Python rewrite and new functionality were authored by Alex Reynolds.
 
 This tool uses the [blueimp Gallery](https://github.com/blueimp/Gallery) and [Github octicons](https://github.com/primer/octicons) projects, both of which are MIT-licensed.
 
-## What's up with the name?
+## So what's up with the name?
 
-"Scott Kuehn: he came up with the name. The legend is that when asked what to call the program, he lifted a can of cola, sighed deeply, and said 'soda plot'." - R. Sandstrom
+"Scott Kuehn: he came up with the name. The legend is that when asked what to call the program, he lifted a can of cola, sighed deeply, and said: 'soda plot'." - R. Sandstrom
