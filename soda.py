@@ -26,6 +26,8 @@ import os
 import tempfile
 import shutil
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 import requests_kerberos
 import certifi
 import optparse
@@ -37,6 +39,8 @@ import subprocess
 import jinja2
 import pdfrw
 import ucsc_pdf_bbox_parser
+import time
+import datetime
 
 default_title = "Soda Gallery"
 default_genome_browser_url = "https://gb1.altiusinstitute.org"
@@ -85,6 +89,21 @@ def usage(errCode):
     args = ["-h"]
     (options, args) = parser.parse_args(args)
     sys.exit(errCode)
+
+default_requests_max_retries = 5
+default_requests_backoff_factor = 10  # sleep for [0.0s, 10s, 20s, ...] between retries
+default_requests_status_forcelist = [ 500, 502, 503, 504 ]
+
+def create_retriable_session():
+    session = requests.Session()
+    retries = Retry(
+        total = default_requests_max_retries,
+        backoff_factor = default_requests_backoff_factor,
+        status_forcelist = default_requests_status_forcelist,
+    )
+    session.mount('http://', HTTPAdapter(max_retries=retries))
+    session.mount('https://', HTTPAdapter(max_retries=retries))
+    return session
 
 class Soda:
     def __init__(self):
@@ -307,6 +326,10 @@ class Soda:
                 if len(region_elements) == 1:
                     sys.stderr.write("Warning: Possible blank line in input regions file\n")
                     continue
+                # skip if start and stop are the same
+                if int(original_start) == int(original_stop):
+                    sys.stderr.write("Warning: Possible zero-length region in input regions file\n")
+                    continue
                 # adjust range, if set
                 if this.range_padding:
                     try:
@@ -321,8 +344,9 @@ class Soda:
                         sys.stderr.write("Error: Region elements are [%d | %s]\n" % (len(region_elements), region_elements))
                         sys.exit(-1)
                 # create modified ID from index, position and current ID, if available
+                # re-encode in ASCII character set (with risk of data loss) to avoid template rendering errors
                 if len(region_elements) >= 4:
-                    mod_id = region_elements[3]
+                    mod_id = region_elements[3].decode("utf-8").encode("ascii", "ignore")
                     mod_id = mod_id.replace(' ', '-')
                     mod_id = mod_id.replace(':', '-')
                     mod_id = mod_id.replace('_', '-')
@@ -399,6 +423,35 @@ class Soda:
                 region_id = region_obj['id']
                 this.region_objs.append(region_obj)
                 this.generate_pdf_from_annotated_region(region_obj, region_id, debug)
+    
+    def generate_pdf_url_response(this, pdf_url, credentials, enc_position_str):
+        try:
+            s = create_retriable_session()
+            browser_pdf_url_response = s.get(
+                url = pdf_url,
+                auth = credentials,
+                verify = True,
+            )
+            return browser_pdf_url_response.text
+        except requests.exceptions.ChunkedEncodingError as err:
+            sys.stderr.write("Warning: Could not retrieve PDF for region [%s]\n" % (enc_position_str))
+            return None
+    
+    def generate_pdf_hrefs(this, response_text, debug):
+        browser_pdf_url_soup = bs4.BeautifulSoup(response_text, "html.parser")
+        browser_pdf_url_soup_hrefs = []
+        for anchor in browser_pdf_url_soup.find_all('a'):
+            browser_pdf_url_soup_hrefs.append(anchor['href'])
+        if debug:
+            sys.stderr.write("Debug: Unfiltered PDF soup anchor HREFs are [%s]\n" % (str(browser_pdf_url_soup_hrefs)))        
+        browser_pdf_url_regex = re.compile("hgt_[a-z0-9_]*.pdf")
+        browser_pdf_url_soup_hrefs_filtered = [href for href in browser_pdf_url_soup_hrefs if browser_pdf_url_regex.search(href)]
+        if debug:
+            sys.stderr.write("Debug: Filtered PDF soup anchor HREFs are [%s]\n" % (str(browser_pdf_url_soup_hrefs_filtered)))
+        browser_pdf_url_soup_hrefs_converted = [href.replace('..', this.browser_url) for href in browser_pdf_url_soup_hrefs_filtered]
+        if debug:
+            sys.stderr.write("Debug: Converted PDF soup anchor HREFs are [%s]\n" % (str(browser_pdf_url_soup_hrefs_converted)))
+        return browser_pdf_url_soup_hrefs_converted
 
     def generate_pdf_from_annotated_region(this, region_obj, region_id, debug):
         browser_position_str = region_obj['chrom'] + ":" + str(region_obj['start']) + "-" + str(region_obj['stop'])
@@ -470,32 +523,26 @@ class Soda:
         modified_browser_pdf_url = this.browser_pdf_url + "&position=" + encoded_browser_position_str
         if debug:
             sys.stderr.write("Debug: Requesting PDF via: [%s]\n" % (modified_browser_pdf_url))
-        try:
-            browser_pdf_url_response = requests.get(
-                url = modified_browser_pdf_url,
-                auth = browser_credentials,
-                verify = True
-            )
-        except requests.exceptions.ChunkedEncodingError as err:
-            sys.stderr.write("Warning: Could not retrieve PDF for region [%s]\n" % (encoded_browser_position_str))
-            return
-        browser_pdf_url_soup = bs4.BeautifulSoup(browser_pdf_url_response.text, "html.parser")
-        browser_pdf_url_soup_hrefs = []
-        for anchor in browser_pdf_url_soup.find_all('a'):
-            browser_pdf_url_soup_hrefs.append(anchor['href'])
-        if debug:
-            sys.stderr.write("Debug: Unfiltered PDF soup anchor HREFs are [%s]\n" % (str(browser_pdf_url_soup_hrefs)))        
-        browser_pdf_url_regex = re.compile("hgt_[a-z0-9_]*.pdf")
-        browser_pdf_url_soup_hrefs_filtered = [href for href in browser_pdf_url_soup_hrefs if browser_pdf_url_regex.search(href)]
-        if debug:
-            sys.stderr.write("Debug: Filtered PDF soup anchor HREFs are [%s]\n" % (str(browser_pdf_url_soup_hrefs_filtered)))
-        browser_pdf_url_soup_hrefs_converted = [href.replace('..', this.browser_url) for href in browser_pdf_url_soup_hrefs_filtered]
-        if debug:
-            sys.stderr.write("Debug: Converted PDF soup anchor HREFs are [%s]\n" % (str(browser_pdf_url_soup_hrefs_converted)))
-        # fetch PDF
-        if len(browser_pdf_url_soup_hrefs_converted) != 1:
-            sys.stderr.write("Error: No or more than one PDF available for this region\n")
-            usage(-1)
+        convert_attempt_counter = 0
+        request_attempt_counter = 0
+        browser_pdf_url_soup_hrefs_converted = []
+        while True:
+            browser_pdf_url_response_text = None
+            while True:
+                browser_pdf_url_response_text = this.generate_pdf_url_response(modified_browser_pdf_url, browser_credentials, encoded_browser_position_str)
+                if browser_pdf_url_response_text:
+                    break
+                request_attempt_counter += 1
+                if request_attempt_counter == 5:
+                    sys.stderr.write("Error: Could not successfully retrieve complete cart response")
+                    usage(-1)
+            browser_pdf_url_soup_hrefs_converted = this.generate_pdf_hrefs(browser_pdf_url_response_text, debug)
+            if len(browser_pdf_url_soup_hrefs_converted) == 1:
+                break
+            convert_attempt_counter += 1
+            if convert_attempt_counter == 5:
+                sys.stderr.write("Error: No or more than one PDF available for this region\n")
+                usage(-1)
         browser_pdf_url = browser_pdf_url_soup_hrefs_converted[0]
         browser_pdf_response = requests.get(
             url = browser_pdf_url,
@@ -759,6 +806,7 @@ class Soda:
 
     def setup_gallery_parameters(this, title, debug):
         this.gallery_title = title
+        this.gallery_timestamp = datetime.datetime.now().replace(microsecond=0).isoformat()
         
     def render_gallery_index(this, debug):
         this.setup_gallery_parameters(options.galleryTitle, debug)
@@ -776,6 +824,7 @@ class Soda:
         external_urls = []
         titles = []
         descriptions = []
+        genomic_regions = []
         for idx, region_id in enumerate(this.region_ids):
             image_urls.append('images/' + region_id + '.png')
             thumbnail_urls.append('images/thumbnails/' + region_id + '.png')
@@ -791,10 +840,13 @@ class Soda:
                 titles.append(region_id)
             description = ' '.join(description_components)
             descriptions.append(description)
+            genomic_region = region_obj['chrom'] + ' : ' + region_obj['start'] + ' - ' + region_obj['stop']
+            genomic_regions.append(genomic_region)
             
         render_context = {
             'title' : this.gallery_title,
-            'image_data' : zip(image_urls, thumbnail_urls, pdf_urls, external_urls, titles, descriptions)
+            'timestamp' : this.gallery_timestamp,
+            'image_data' : zip(image_urls, thumbnail_urls, pdf_urls, external_urls, titles, descriptions, genomic_regions)
         }
         with open(gallery_index_fn, "w") as gallery_index_fh:
             html = template_environment.get_template(template_fn).render(render_context).encode('utf-8')
