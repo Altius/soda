@@ -27,8 +27,15 @@ import tempfile
 import shutil
 import requests
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
-import requests_kerberos
+try:
+    from urllib3.util.retry import Retry
+except ImportError:
+    from requests.packages.urllib3.util.retry import Retry
+try:
+    import requests_kerberos  # optional; only needed with -y/--useKerberosAuthentication
+except ImportError:
+    requests_kerberos = None
+import fitz  # PyMuPDF: PDF->PNG rasterization (replaces ImageMagick+Ghostscript)
 import certifi
 import optparse
 import urllib
@@ -346,7 +353,7 @@ class Soda:
                 # create modified ID from index, position and current ID, if available
                 # re-encode in ASCII character set (with risk of data loss) to avoid template rendering errors
                 if len(region_elements) >= 4:
-                    mod_id = region_elements[3].decode("utf-8").encode("ascii", "ignore")
+                    mod_id = region_elements[3].encode("ascii", "ignore").decode("ascii")
                     mod_id = mod_id.replace(' ', '-')
                     mod_id = mod_id.replace(':', '-')
                     mod_id = mod_id.replace('_', '-')
@@ -468,6 +475,9 @@ class Soda:
         if this.browser_session_basic_credentials:
             browser_credentials = requests.auth.HTTPBasicAuth(this.browser_username, this.browser_password)
         elif this.browser_session_kerberos_credentials:
+            if requests_kerberos is None:
+                sys.stderr.write("Error: Kerberos authentication requested but requests_kerberos is not installed\n")
+                sys.exit(os.EX_CONFIG)
             browser_credentials = requests_kerberos.HTTPKerberosAuth(mutual_authentication=requests_kerberos.OPTIONAL)
         browser_cartdump_response = requests.post(
             url = this.browser_dump_url,
@@ -483,8 +493,8 @@ class Soda:
         elif browser_cartdump_response.status_code != 200:
             sys.stderr.write("Error: Access to genome browser failed\nStatus\t[%d]\nHeaders\t[%s]\nText\t[%s]" % (browser_cartdump_response.status_code, browser_cartdump_response.headers, browser_cartdump_response.text))
             sys.exit(-1)
-        # get cart dump
-        browser_cartdump_response_content = browser_cartdump_response.content
+        # get cart dump (use .text for a decoded str in py3, not bytes)
+        browser_cartdump_response_content = browser_cartdump_response.text
         browser_cartdump_textSize = None # textSize
         browser_cartdump_hgt_labelWidth = None # hgt.labelWidth
         browser_cartdump_lines = browser_cartdump_response_content.split('\n')
@@ -686,33 +696,44 @@ class Soda:
             this.generate_png_from_pdf(region_id, debug)
 
     def generate_png_from_pdf(this, region_id, debug):
+        # Render PDF -> PNG with PyMuPDF (no ImageMagick/Ghostscript dependency).
         browser_pdf_local_fn = os.path.join(this.temp_pdf_results_dir, region_id + '.pdf')
         browser_png_local_fn = os.path.join(this.temp_png_results_dir, region_id + '.png')
-        # convert PDF to PNG with specified output resolution
-        convert_cmd = '%s -density %d %s -background white -flatten %s' % (this.convert_bin_fn, this.output_png_resolution, browser_pdf_local_fn, browser_png_local_fn)
+        zoom = float(this.output_png_resolution) / 72.0
         try:
-            convert_result = subprocess.check_output(convert_cmd, shell = True)
-        except subprocess.CalledProcessError as err:
-            convert_result = "Error: Command '{}' returned with error (code {}): {}".format(err.cmd, err.returncode, err.output)
-            sys.stderr.write("%s\n" % (convert_result))
+            doc = fitz.open(browser_pdf_local_fn)
+            page = doc.load_page(0)
+            pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            pix.save(browser_png_local_fn)
+            doc.close()
+        except Exception as err:
+            sys.stderr.write("Error: PDF->PNG render failed for [%s]: %s\n" % (browser_pdf_local_fn, err))
             sys.exit(-1)
         if debug:
             sys.stderr.write("Debug: Converted image file located at [%s]\n" % (browser_png_local_fn))
 
     def generate_thumbnails_from_pngs(this, debug):
         for region_id in this.region_ids:
-            this.generate_thumbnail_from_png(region_id, debug)        
+            this.generate_thumbnail_from_png(region_id, debug)
 
     def generate_thumbnail_from_png(this, region_id, debug):
-        browser_png_local_fn = os.path.join(this.temp_png_results_dir, region_id + '.png')
+        # Render a thumbnail directly from the source PDF, scaled to fit the
+        # thumbnail box (preserving aspect ratio), again via PyMuPDF.
+        browser_pdf_local_fn = os.path.join(this.temp_pdf_results_dir, region_id + '.pdf')
         browser_thumb_local_fn = os.path.join(this.temp_thumbs_results_dir, region_id + '.png')
         browser_thumb_width = this.output_png_thumbnail_width
         browser_thumb_height = this.output_png_thumbnail_height
-        convert_cmd = '%s -thumbnail %dx%d %s %s' % (this.convert_bin_fn, browser_thumb_width, browser_thumb_height, browser_png_local_fn, browser_thumb_local_fn)
         try:
-            convert_result = subprocess.check_output(convert_cmd, shell = True)
-        except subprocess.CalledProcessError as err:
-            convert_result = "Error: Command '{}' returned with error (code {}): {}".format(err.cmd, err.returncode, err.output)
+            doc = fitz.open(browser_pdf_local_fn)
+            page = doc.load_page(0)
+            rect = page.rect
+            zoom = min(float(browser_thumb_width) / rect.width,
+                       float(browser_thumb_height) / rect.height)
+            pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            pix.save(browser_thumb_local_fn)
+            doc.close()
+        except Exception as err:
+            sys.stderr.write("Error: thumbnail render failed for [%s]: %s\n" % (browser_pdf_local_fn, err))
             sys.exit(-1)
         if debug:
             sys.stderr.write("Debug: Converted thumbnail file located at [%s]\n" % (browser_thumb_local_fn))
@@ -846,15 +867,19 @@ class Soda:
         render_context = {
             'title' : this.gallery_title,
             'timestamp' : this.gallery_timestamp,
-            'image_data' : zip(image_urls, thumbnail_urls, pdf_urls, external_urls, titles, descriptions, genomic_regions)
+            'image_data' : list(zip(image_urls, thumbnail_urls, pdf_urls, external_urls, titles, descriptions, genomic_regions))
         }
-        with open(gallery_index_fn, "w") as gallery_index_fh:
-            html = template_environment.get_template(template_fn).render(render_context).encode('utf-8')
+        with open(gallery_index_fn, "w", encoding="utf-8") as gallery_index_fh:
+            html = template_environment.get_template(template_fn).render(render_context)
             gallery_index_fh.write(html)
         if debug:
             sys.stderr.write("Debug: Wrote rendered gallery index file [%s]\n" % (gallery_index_fn))
 
 def main():
+    # Allow the browser password to come from an env var so it is not exposed
+    # in shell history or the process table (useful for gb1 AD/Basic auth).
+    if not options.browserPassword and os.environ.get("SODA_BROWSER_PASSWORD"):
+        options.browserPassword = os.environ["SODA_BROWSER_PASSWORD"]
     if not options.regionsFn:
         sys.stderr.write("Error: Please specify a BED file of input regions\n\n")
         usage(-1)
@@ -887,12 +912,16 @@ def main():
     if not options.octiconsSrcDir:
         options.octiconsSrcDir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'octicons')
     s.ensure_octicons_src_dir(options.octiconsSrcDir, options.verbose)
-    if not options.convertBinFn:
-        options.convertBinFn = s.find_convert_bin_fn_in_environment_path(options.verbose)
-    s.ensure_convert_bin_fn(options.convertBinFn, options.verbose)
-    if not options.identifyBinFn:
-        options.identifyBinFn = s.find_identify_bin_fn_in_environment_path(options.verbose)
-    s.ensure_identify_bin_fn(options.identifyBinFn, options.verbose)
+    # ImageMagick convert/identify are only needed for the optional interval/
+    # midpoint annotation overlays. Core PDF->PNG and thumbnailing now use
+    # PyMuPDF, so only require these binaries when annotations are requested.
+    if options.midpointAnnotation or options.intervalAnnotation:
+        if not options.convertBinFn:
+            options.convertBinFn = s.find_convert_bin_fn_in_environment_path(options.verbose)
+        s.ensure_convert_bin_fn(options.convertBinFn, options.verbose)
+        if not options.identifyBinFn:
+            options.identifyBinFn = s.find_identify_bin_fn_in_environment_path(options.verbose)
+        s.ensure_identify_bin_fn(options.identifyBinFn, options.verbose)
     s.setup_temp_dirs(options.verbose)
     s.copy_regions_to_temp_regions_dir(options.verbose)
     s.annotate_temp_regions_with_custom_id(options.verbose)
