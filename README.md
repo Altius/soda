@@ -56,18 +56,39 @@ $ git clone https://github.com/Altius/soda.git
 
 #### Note
 
-If you run this script via the Git repository, such from a non-modules host in the lab, or on your personal workstation or laptop, you may need to use `pip` or similar to add Python libraries that may not be part of a typical environment:
+`soda.py` runs under **Python 3**. If you run this script via the Git repository, such
+from a non-modules host in the lab, or on your personal workstation or laptop, install
+the Python dependencies with `pip` (a virtual environment is recommended):
+
+```bash
+$ python3 -m venv .venv && source .venv/bin/activate
+$ pip install -r requirements.txt
+```
+
+This installs:
 
 * [requests](https://pypi.python.org/pypi/requests)
-* [requests-kerberos](https://pypi.python.org/pypi/requests-kerberos)
+* [certifi](https://pypi.python.org/pypi/certifi)
 * [Beautiful Soup](https://pypi.python.org/pypi/beautifulsoup4)
 * [Jinja2](https://pypi.python.org/pypi/Jinja2)
 * [pdfrw](https://pypi.python.org/pypi/pdfrw)
-* [pdfminer](https://pypi.python.org/pypi/pdfminer)
+* [pdfminer.six](https://pypi.python.org/pypi/pdfminer.six)
+* [PyMuPDF](https://pypi.python.org/pypi/PyMuPDF)
 
-It may be useful to use a package manager to add [ImageMagick](http://www.imagemagick.org) and [Ghostscript](http://www.ghostscript.com/), if not already installed.
+PDF browser shots are now rasterized to PNG with **PyMuPDF**, which bundles its own
+renderer. ImageMagick and Ghostscript are **no longer required** for the core gallery;
+they are only needed for the optional interval/midpoint annotation overlays (`-i`/`-d`).
 
-Installing these dependencies may also require administrator privileges. In this case, please see the documentation for these components for installation instructions, or contact your local IT support for assistance.
+[requests-kerberos](https://pypi.python.org/pypi/requests-kerberos) is optional and only
+needed if your browser instance requires Kerberos/Negotiate authentication
+(`-y`/`--useKerberosAuthentication`); it requires system krb5 development headers to
+build. If your browser instance accepts HTTP Basic authentication (for example, an
+SSO/AD-backed instance that advertises a `Basic` realm), pass `-u`/`-p` instead and skip
+this dependency.
+
+Installing system components may require administrator privileges. In this case, please
+see the documentation for these components for installation instructions, or contact your
+local IT support for assistance.
 
 ## Usage
 

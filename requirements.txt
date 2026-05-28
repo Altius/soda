@@ -1,0 +1,14 @@
+# soda.py runtime dependencies (Python 3)
+#   pip install -r requirements.txt
+requests
+certifi
+beautifulsoup4
+jinja2
+pdfrw
+pdfminer.six
+PyMuPDF            # PDF->PNG rasterization (replaces ImageMagick + Ghostscript)
+
+# Optional: only needed for Kerberos/Negotiate auth (-y/--useKerberosAuthentication).
+# Requires system krb5 dev headers (krb5-config) to build; skip if your browser
+# instance accepts HTTP Basic auth.
+# requests-kerberos
